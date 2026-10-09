@@ -108,4 +108,4 @@ PC・タブレットの既存DOM構成は維持。スマホだけ、`MobileAnaly
 
 ユーザーの追加承認により、GitHub Pages版を認証なし・端末内保存で公開。`lib/state-request.ts`は既存のSites API呼出を維持し、Pagesビルドのみ `github-pages/state-request.ts` に置換する。IndexedDBのreadwrite transactionとrevisionで複数タブの競合・保存失敗を検出し、既存JSON形式・削除時の設定保持・入力保持を維持。保存先の案内とJSONバックアップへの導線を追加。
 
-Pagesは既存のmain/ルート設定を利用。生成したindex.mdとpages-assetsを既存のPagesワークフローが公開する。Pages設定変更APIは連携権限不足のため使用しない。Sitesのデータ・認証・D1構成とオフラインHTMLは変更なし。移行と更新手順はGITHUB_PAGES.md。
+Pagesは既存のmain/ルート設定を利用。生成したpages-entry.htmlとpages-assetsを既存のPagesワークフローが公開する。Pages設定変更APIは連携権限不足のため使用しない。Sitesのデータ・認証・D1構成とオフラインHTMLは変更なし。移行と更新手順はGITHUB_PAGES.md。
