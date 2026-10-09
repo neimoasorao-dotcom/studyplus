@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import * as A from '../lib/analysis.ts';
+const d=A.emptyData();d.subjects=[{id:'math',name:'数学',ideal_ratio:.5,target_days_per_week:7},{id:'en',name:'英語',ideal_ratio:.5,target_days_per_week:7}];d.goals.site.weekly_total_minutes=1400;
+for(const date of A.dates('2026-09-01','2026-10-08'))for(const s of d.subjects)d.study_records.push({date,subject_id:s.id,duration_minutes:100});
+const s=A.scores(d,'2026-10-05','2026-10-08');assert.equal(s.balance,100);assert.equal(s.time,100);assert.equal(s.zero,100);assert.equal(A.round(s.continuity),57.1);assert.equal(A.round(s.stability),95.7);assert.equal(A.round(s.condition),97.4);
+const w=A.week(d,'2026-10-08');assert.equal(w.elapsed,4);assert.equal(w.remaining,4);assert.equal(w.current,800);assert.equal(w.projected,1400);assert.equal(w.required,150);assert.equal(w.status,'ON TRACK');assert.equal(A.weekStart('2026-10-08','sunday'),'2026-10-04');
+const sunday=A.week(d,'2026-10-11','2026-10-11');assert.equal(sunday.remaining,1);assert.equal(sunday.required,600);assert.equal(sunday.status,'OFF TRACK');assert.equal(A.week(d,'2026-10-11','2026-10-12').status,'NOT ACHIEVED');
+assert.equal(A.scores(A.emptyData(),'2026-10-05','2026-10-08').condition,null);
+const partial={...d,study_records:d.study_records.filter(r=>r.date>='2026-10-07')};assert.equal(A.scores(partial,'2026-10-05','2026-10-08').condition,null);
+const incorrect={...d,subjects:[{id:'math',name:'数学',ideal_ratio:.8,target_days_per_week:5}]};assert.equal(A.scores(incorrect,'2026-10-05','2026-10-08').condition,null);
+let merged=A.mergeImport(d,{study_records:[d.study_records[0],{date:'2026-10-08',duration_minutes:0,subject_id:'math'},{date:'bad',duration_minutes:50,subject_id:'math'}]});assert.equal(merged.duplicates,1);assert.equal(merged.added,2);assert.equal(d.study_records.length,76);assert(merged.warnings.length>=2);assert.equal(A.total(A.records(merged.data,'2026-10-05','2026-10-08')),800);
+const sameSource=[{source_id:'123',source:'studyplus',date:'2026-10-08',duration_minutes:10},{source_id:'123',source:'studyplus',date:'2026-10-08',duration_minutes:11}];merged=A.mergeImport(A.emptyData(),{study_records:sameSource});assert.equal(merged.duplicates,1);assert.equal(merged.added,1);assert.deepEqual(merged.data.imports[0].original.study_records,sameSource);
+assert.equal(A.movingAverage(d,'2026-10-08'),200);assert.equal(A.goal({...d,goals:{site:{weekly_total_minutes:Infinity}}}),null);
+assert.throws(()=>A.mergeImport(d,{study_records:[null]}));assert.throws(()=>A.mergeImport(d,{study_records:[],settings:{balanceWeight:9}}));
+const opt=A.optimal(d,'2026-10-05','2026-10-08',600);assert.equal(A.sum(opt.allocation.map(x=>x.minutes)),600);assert.equal(opt.after,100);
+const nonuniform={...d,study_records:d.study_records.filter(r=>r.date!=='2026-10-07')};const z=A.scores(nonuniform,'2026-10-05','2026-10-08');assert.equal(z.zeroDays,1);assert(z.stability<s.stability);assert.equal(A.packet(d,'月間分析','2026-10-08').comparisons.monthly_current_minutes,1600);
+assert.equal(A.validDate('2026-02-30'),false);assert.equal(A.validDate('2026-02-28'),true);
+console.log('PASS: formulas, partial coverage, week boundaries, duplicates, invalid data preservation, simulation, monthly packet');
+
+assert.equal(A.week(d,'2026-10-09').start,'2026-10-05');assert.equal(A.week(d,'2026-10-09').end,'2026-10-11');
+assert.equal(A.week(d,'2026-10-11').start,'2026-10-05');assert.equal(A.week(d,'2026-10-12').start,'2026-10-12');
+assert.equal(A.week(d,'2027-01-01').start,'2026-12-28');assert.equal(A.week(d,'2027-01-01').end,'2027-01-03');
+assert.deepEqual(A.weekdayStats(d,'2026-10-05','2026-10-11').map(x=>x.day),['月','火','水','木','金','土','日']);
+const perDay={...A.emptyData(),study_records:A.dates('2026-10-05','2026-10-11').map((date,i)=>({date,duration_minutes:i+1}))};
+assert.deepEqual(A.weekdayStats(perDay,'2026-10-05','2026-10-11').map(x=>x.average),[1,2,3,4,5,6,7]);
+console.log('PASS: Monday–Sunday display order, weekday values, weekly boundaries, year boundary');
+
+const reported={...A.emptyData(),goals:{site:{weekly_total_minutes:1620}},study_records:[{date:'2026-10-09',duration_minutes:914}]};
+const friday=A.week(reported,'2026-10-09','2026-10-09');assert.equal(friday.remaining,3);assert.equal(friday.rest,706);assert.equal(friday.required,706/3);assert.equal(Math.round(friday.required),235);
+for(const [date,remaining] of [['2026-10-05',7],['2026-10-09',3],['2026-10-10',2],['2026-10-11',1],['2026-10-12',7]])assert.equal(A.week(reported,date,date).remaining,remaining);
+assert.equal(A.week({...reported,goals:{site:{weekly_total_minutes:914}}},'2026-10-09','2026-10-09').required,0);
+assert.equal(A.week(A.emptyData(),'2026-10-09','2026-10-09').required,null);
+console.log('PASS: remaining days include today, reported 11h46m example, Sunday remains available, Monday resets, reached/missing goals');

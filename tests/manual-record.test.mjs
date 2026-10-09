@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import ts from 'typescript';
+import * as A from '../lib/analysis.ts';
+globalThis.__manualAnalysis=A;
+const source=ts.transpileModule(readFileSync('lib/manual-record.ts','utf8').replace("import {type Data,validDate} from './analysis';",'const {validDate}=globalThis.__manualAnalysis;'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
+const M=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+const data=A.emptyData();data.subjects=[{id:'en',name:'英語',ideal_ratio:1}];data.materials=[{id:'leap',name:'LEAP',subject_id:'en'},{id:'unknown',name:'未分類',subject_id:null}];
+const input=M.initialRecord('2026-10-09',data,'leap');assert.equal(input.subject_id,'en');assert.equal(M.initialRecord('2026-10-09',data,'unknown').subject_id,'');
+const record=M.buildManualRecord({...input,hours:'1',minutes:'15',content:' No. 101〜150 ',start_time:'23:30',end_time:'00:45'},data,'2026-10-09','manual-1');
+const saved={...data,study_records:[record]};assert.equal(A.validRecord(record),true);assert.equal(A.week(saved,'2026-10-09').current,75);assert.equal(A.byKey(saved.study_records,'material_id').leap,75);assert.equal(A.timeBands(saved.study_records).夜,75);assert.equal(record.content,'No. 101〜150');
+assert.equal(M.manualDuplicateCount(saved,M.buildManualRecord(input,data,'2026-10-09','other')),0);
+assert.equal(M.manualDuplicateCount(saved,{...record,source:'studyplus',source_id:'different'}),1);
+const exported=JSON.parse(JSON.stringify(saved));assert.equal(A.mergeImport(saved,exported).added,0);assert.equal(A.mergeImport(saved,exported).duplicates,1);
+// Two intentionally separate sessions stay separate when exporting/reimporting.
+const second={...record,id:'manual-2',source_id:'manual-2'};const twice={...saved,study_records:[record,second]};assert.equal(A.mergeImport(data,twice).added,2);assert.equal(A.total(twice.study_records),150);
+for(const changes of [{date:'2026-02-30'},{date:'2026-10-10'},{subject_id:''},{material_id:'missing'},{hours:'0',minutes:'0'},{hours:'24',minutes:'1'},{hours:'1.5'},{minutes:'60'},{minutes:''},{hours:'-1'},{start_time:'25:00'},{end_time:'12:60'}])assert.throws(()=>M.buildManualRecord({...input,...changes},data,'2026-10-09','invalid'));
+assert.equal(M.buildManualRecord({...input,hours:'24',minutes:'0'},data,'2026-10-09','day').duration_minutes,1440);
+const noBook=M.buildManualRecord({...input,material_id:'',start_time:'',end_time:''},data,'2026-10-09','no-book');assert.equal(noBook.material_id,null);assert.equal(noBook.start_time,null);assert.equal(noBook.comment,null);
+const next=M.nextRecord({...input,content:'test',comment:'memo',start_time:'18:00',end_time:'18:30'});assert.equal(next.date,input.date);assert.equal(next.material_id,'leap');assert.equal(next.subject_id,'en');assert.equal(next.minutes,'');assert.equal(next.content,'');assert.equal(next.start_time,'');
+console.log('PASS: manual entries join totals/material/time-band analysis, input validation, optional fields, duplicate candidates, lossless JSON reimport, consecutive-entry reset');
