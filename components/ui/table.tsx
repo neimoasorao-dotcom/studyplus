@@ -2,11 +2,17 @@
 
 import * as React from "react"
 
+import { useIsMobile } from "@/hooks/use-mobile"
+
 import { cn } from "@/lib/utils"
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
+  const mobile = useIsMobile()
   return (
     <div
+      tabIndex={mobile ? 0 : undefined}
+      role={mobile ? "region" : undefined}
+      aria-label={mobile ? "表（左右にスクロールできます）" : undefined}
       data-slot="table-container"
       className="relative w-full overflow-x-auto"
     >
