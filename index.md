@@ -1,0 +1,19 @@
+---
+layout: null
+permalink: /
+---
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="学習記録を比較し、学習状態と改善策を確認する個人用ダッシュボード。記録はこの端末のブラウザに保存します。" />
+    <link rel="icon" href="/studyplus/favicon.svg" />
+    <title>Studyplus 学習分析</title>
+    <script type="module" crossorigin src="/studyplus/pages-assets/index-Vn121Qr0.js"></script>
+    <link rel="stylesheet" crossorigin href="/studyplus/pages-assets/index-DoVgPIiY.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
