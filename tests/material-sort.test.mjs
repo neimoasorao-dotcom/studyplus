@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {sortMaterialRows,validMaterialSort} from '../lib/material-sort.ts';
+const rows=[{name:'教材2',minutes:10,last:'2026-10-09'},{name:'教材10',minutes:120,last:'2026-10-07'},{name:'未使用',minutes:0},{name:'同時間',minutes:10,last:'2026-10-08'}];
+const before=structuredClone(rows);
+assert.deepEqual(sortMaterialRows(rows).map(x=>x.minutes),[120,10,10,0]);
+assert.deepEqual(sortMaterialRows(rows,'time_asc').map(x=>x.minutes),[0,10,10,120]);
+assert.deepEqual(sortMaterialRows(rows,'recent').map(x=>x.last),['2026-10-09','2026-10-08','2026-10-07',undefined]);
+const named=sortMaterialRows(rows,'name');assert(named.findIndex(x=>x.name==='教材2')<named.findIndex(x=>x.name==='教材10'));
+assert.deepEqual(rows,before);assert.deepEqual(sortMaterialRows([]),[]);
+assert.equal(validMaterialSort('recent'),true);assert.equal(validMaterialSort('invalid'),false);
+console.log('PASS: descending default, ascending, natural name order, recent order, stable ties, unmodified source, empty rows, preference validation');
