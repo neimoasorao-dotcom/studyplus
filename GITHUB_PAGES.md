@@ -24,9 +24,9 @@ npm run build:pages
 npm run prepare:pages
 ```
 
-ソース変更と生成された `index.md` / `pages-assets/` / `favicon.svg` を同じPRでコミット・マージする。GitHub Actionsの「pages build and deployment」の成功を確認する。`dist-pages/`、node_modules、ローカル保存データはコミットしない。
+ソース変更と生成された `pages-entry.html` / `pages-assets/` / `favicon.svg` を同じPRでコミット・マージする。GitHub Actionsの「pages build and deployment」の成功を確認する。`dist-pages/`、node_modules、ローカル保存データはコミットしない。
 
-`index.md`は公開時にindex.htmlになる。開発用リポジトリのルートにindex.htmlを置かないため、既存のVite/Vinext起動時にPages版がSites版を隠す問題を避ける。`scripts/prepare-pages.mjs`はPages用生成物だけを更新する。
+`pages-entry.html`は公開時にindex.htmlになる。開発用リポジトリのルートにindex.htmlを置かないため、既存のVite/Vinext起動時にPages版がSites版を隠す問題を避ける。`scripts/prepare-pages.mjs`はPages用生成物だけを更新する。
 
 Pages版は同じ `app/page.tsx` とCSSを利用し、`vite.pages.config.ts` のビルド時aliasで保存用モジュールだけを差し替える。Sites版の `npm run dev` / `npm run build` と `/api/state` / D1構成は維持。オフラインHTMLは別成果物で、今回の公開には使用していない。
 

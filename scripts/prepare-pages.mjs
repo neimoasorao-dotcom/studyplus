@@ -16,8 +16,9 @@ for (const name of await readdir(assets)) if (!generated.has(name)) {
   await rm(path.join(assets, name));
 }
 for (const name of generated) await copyFile(path.join(output, 'pages-assets', name), path.join(assets, name));
-// Jekyll converts index.md to index.html at publish time. Keeping index.html out
+// Jekyll publishes pages-entry.html at / using its permalink without Markdown conversion.
+// Keeping index.html out
 // of the checkout prevents Vite/Vinext dev from serving the Pages entry over App.
-await writeFile(path.join(root, 'index.md'), `---\nlayout: null\npermalink: /\n---\n${html}`);
+await writeFile(path.join(root, 'pages-entry.html'), `---\nlayout: null\npermalink: /\n---\n${html}`);
 await copyFile(path.join(output, 'favicon.svg'), path.join(root, 'favicon.svg'));
-console.log('Prepared index.md, pages-assets, and favicon.svg for the existing main/root Pages source.');
+console.log('Prepared pages-entry.html, pages-assets, and favicon.svg for the existing main/root Pages source.');
