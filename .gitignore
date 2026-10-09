@@ -44,3 +44,7 @@ next-env.d.ts
 /.codex/
 /outputs/
 /work/
+
+# GitHub Pages build output
+/dist-pages/
+tsconfig.tsbuildinfo
