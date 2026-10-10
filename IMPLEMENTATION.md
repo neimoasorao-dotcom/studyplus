@@ -117,3 +117,9 @@ GitHub Pagesと単体HTMLに任意接続の共有同期画面を追加。未接�
 lib/sync-merge.tsで最終同期・端末・共有の三者比較を行い、別の追加や別項目の変更を統合。同一項目の編集や削除と編集の競合は停止し両方保持。キーと同期基準はDataとは別のIndexedDBに保存し、JSONには含めない。入力中は同期を待機し、通信失敗でも端末内保存を維持。教材並び順はprofile.material_sortにも保存し同期するが、Sites版は既存のローカル保存を維持。
 
 初回Cloudflare公開手順・未確認事項はSYNC_SETUP.md。共有APIの本番公開と二端末の実機同期は、Cloudflare認証がこの環境にない場合は未完了として扱う。
+
+## GitHub非公開リポジトリ同期
+
+github-pages/github-sync.tsにGitHub REST保存を追加し、既存の三者比較と端末内保存を共有。neimoasorao-dotcom/studyplus-data/mainを画面の初期値とし、Fine-grained PATは端末の同期設定に保存する。公開リポジトリへの送信を拒否し、ファイルSHAで競合を防ぐ。1MB超はGit Blobs API、UTF-8/base64変換と8百万文字制限を使用。GitHubの過去コミットは削除しない。
+
+Node不要の接続手順はSYNC_SETUP.md。Cloudflare接続済み端末は引き続き利用可能で、既存認証と端末内データの形式を維持。本番トークンを取得・入力していないため、実際のGitHub書込・二端末の本番同期は設定後に確認が必要。
