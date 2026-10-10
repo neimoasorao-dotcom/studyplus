@@ -25,6 +25,7 @@ const db = await mf.getD1Database('DB');
 await db.exec(await readFile('sync-worker/schema.sql', 'utf8'));
 const browser = await chromium.launch({executablePath: process.env.STUDYPLUS_CHROMIUM || '/usr/bin/chromium', headless: true, args: ['--no-sandbox']});
 const contexts = await Promise.all([390, 1280].map(width => browser.newContext({viewport: {width, height: 900}, timezoneId: 'Asia/Tokyo'})));
+if(offlineFile)await contexts[1].addInitScript(()=>{if(navigator.locks)navigator.locks.request=()=>Promise.reject(new DOMException('Test opaque origin','SecurityError'));});
 let offlineServer;
 if (offlineFile) {const html = await readFile(offlineFile);offlineServer = createServer((req,res) => {res.writeHead(200, {'Content-Type':'text/html'});res.end(html);});await new Promise(resolve => offlineServer.listen(5181,'127.0.0.1',resolve));}
 const offlineContexts = new WeakSet();

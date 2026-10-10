@@ -93,7 +93,17 @@ export function synchronize(canApply: () => boolean = () => true): Promise<SyncR
     catch {return {changed, conflicts: [], warning: '共有保存先の更新後に端末の同期状態を保存できませんでした。再度同期してください。'};}
     return {changed, conflicts: [], syncedAt};
   }
-  async function locked(): Promise<SyncResult> {return navigator.locks ? await navigator.locks.request('studyplus-device-sync', async () => await run()) : await run();}
+  async function locked(): Promise<SyncResult> {
+    if (!navigator.locks) return run();
+    let started = false;
+    try {return await navigator.locks.request('studyplus-device-sync', async () => {started = true; return await run();});}
+    catch (e) {
+      // file:// may expose Web Locks but reject its opaque origin. Server SHA/CAS
+      // and local revisions still protect writes when cross-tab locks are absent.
+      if (!started && e instanceof DOMException && ['SecurityError', 'NotSupportedError'].includes(e.name)) return run();
+      throw e;
+    }
+  }
   const promise = locked().finally(() => {running = undefined;});
   running = promise;
   return promise;
