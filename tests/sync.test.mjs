@@ -55,7 +55,7 @@ assert.equal((await request('PUT', {revision: 0, data: base})).status, 200);
 assert.equal((await request('PUT', {revision: 0, data: local})).status, 409);
 assert.deepEqual((await (await request()).json()).data, base);
 assert.equal((await request('PUT', {revision: 1, data: null})).status, 400);
-const large = structuredClone(base); large.extra = '漢字😀'.repeat(100000);
+const large = structuredClone(base); large.extra = '';const prefix = JSON.stringify(large).indexOf('\"extra\":\"') + 9;large.extra = 'x'.repeat(99999-prefix) + '😀' + '漢字😀'.repeat(100000);
 assert.equal((await request('PUT', {revision: 1, data: large})).status, 200);
 assert.deepEqual((await (await request()).json()).data, large);
 const fail = {...env, DB: {...db, batch() {throw new Error('test rollback');}}};

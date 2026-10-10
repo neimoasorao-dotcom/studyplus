@@ -48,7 +48,15 @@ const worker = {
       const revision = payload.revision, next = revision + 1;
       await env.DB.prepare('INSERT OR IGNORE INTO sync_state (id, revision) VALUES (?, ?)').bind('main', 0).run();
       const ops: D1PreparedStatement[] = [];
-      for (let i = 0; i < body.length; i += 100000) ops.push(env.DB.prepare('INSERT INTO sync_chunks (revision, part, body) SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM sync_state WHERE id = ? AND revision = ?)').bind(next, i / 100000, body.slice(i, i + 100000), 'main', revision));
+      let part = 0;
+      for (let i = 0; i < body.length;) {
+        let end = Math.min(i + 100000, body.length);
+        // Never split an emoji's UTF-16 surrogate pair between SQL parameters.
+        const last = body.charCodeAt(end - 1);
+        if (end < body.length && last >= 0xd800 && last <= 0xdbff) end--;
+        ops.push(env.DB.prepare('INSERT INTO sync_chunks (revision, part, body) SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM sync_state WHERE id = ? AND revision = ?)').bind(next, part++, body.slice(i, end), 'main', revision));
+        i = end;
+      }
       ops.push(env.DB.prepare('UPDATE sync_state SET revision = ? WHERE id = ? AND revision = ?').bind(next, 'main', revision));
       ops.push(env.DB.prepare('DELETE FROM sync_chunks WHERE revision < ? AND EXISTS (SELECT 1 FROM sync_state WHERE id = ? AND revision = ?)').bind(next, 'main', next));
       const result = await env.DB.batch(ops);
