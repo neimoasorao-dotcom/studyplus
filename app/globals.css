@@ -131,3 +131,5 @@ table{font-size:.8125rem;font-variant-numeric:tabular-nums}th{background:#f5f8fc
 .sync-dialog summary { overflow-wrap: anywhere; min-height: 44px; }
 .sync-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .sync-actions button { min-height: 44px; }
+
+.sync-dialog select { width: 100%; min-width: 0; min-height: 44px; }

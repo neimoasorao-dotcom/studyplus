@@ -1,8 +1,9 @@
 import {stateRequest} from './state-request';
+import {readGitHub, writeGitHub, validateGitHubTarget} from './github-sync';
 import {mergeSync, sameSyncData, validateSyncData, type Conflict} from '../lib/sync-merge';
 import type {Data} from '../lib/analysis';
 
-type Connection = {session: string; url: string; key: string; base: Data | null; remoteRevision: number; syncedAt?: string};
+type Connection = {provider?: 'github' | 'cloudflare'; repository?: string; branch?: string; session: string; url: string; key: string; base: Data | null; remoteRevision: number; syncedAt?: string};
 export type SyncResult = {changed: boolean; conflicts: Conflict[]; remote?: Data | null; syncedAt?: string; warning?: string};
 const databaseName = 'studyplus-device-sync-v1';
 async function connection(write?: Connection | null, expected?: string): Promise<Connection | null> {
@@ -27,7 +28,7 @@ async function connection(write?: Connection | null, expected?: string): Promise
 }
 export async function getConnection() {
   const c = await connection();
-  return c ? {url: c.url, syncedAt: c.syncedAt} : null;
+  return c ? {provider: c.provider || 'cloudflare', url: c.url, repository: c.repository, branch: c.branch, syncedAt: c.syncedAt} : null;
 }
 export async function connect(url: string, key: string) {
   const parsed = new URL(url);
@@ -38,6 +39,16 @@ export async function connect(url: string, key: string) {
   // Check authentication before persisting; the first merge uses an empty baseline.
   if (!Number.isInteger(remote.revision) || (remote.data !== null && !validateSyncData(remote.data))) throw new Error('同期APIの応答形式が不正です。');
   await connection(next);
+}
+export async function connectGitHub(repository: string, branch: string, key: string) {
+  validateGitHubTarget(repository, branch, key);
+  const next: Connection = {provider: 'github', repository, branch, session: crypto.randomUUID(), url: '', key, base: null, remoteRevision: 0};
+  await readGitHub({repository, branch, key});
+  await connection(next);
+}
+function gitHubTarget(c: Connection) {
+  if (!c.repository || !c.branch) throw new Error('GitHubの同期設定を確認してください。');
+  return {repository: c.repository, branch: c.branch, key: c.key};
 }
 export async function disconnect() {await connection(null);}
 async function request(c: Connection, init?: RequestInit) {
@@ -57,7 +68,7 @@ export function synchronize(canApply: () => boolean = () => true): Promise<SyncR
   async function run(): Promise<SyncResult> {
     const c = await connection();
     if (!c) return {changed: false, conflicts: []};
-    const [local, remote] = await Promise.all([localState(), request(c)]);
+    const [local, remote] = await Promise.all([localState(), c.provider === 'github' ? readGitHub(gitHubTarget(c)) : request(c)]);
     if (!Number.isInteger(remote.revision) || remote.revision < c.remoteRevision || (remote.data !== null && !validateSyncData(remote.data))) throw new Error('共有データの形式または版が不正です。同期は中止しました。');
     const {data, conflicts} = mergeSync(c.base, local.data, remote.data);
     if (conflicts.length) return {changed: false, conflicts, remote: remote.data};
@@ -66,7 +77,7 @@ export function synchronize(canApply: () => boolean = () => true): Promise<SyncR
     if ((await localState()).revision !== local.revision) throw new Error('別のタブで更新されました。再度同期してください。');
     let remoteRevision = remote.revision;
     if (!sameSyncData(remote.data, data)) {
-      remoteRevision = (await request(c, {method: 'PUT', body: JSON.stringify({revision: remote.revision, data})})).revision;
+      remoteRevision = c.provider === 'github' ? (await writeGitHub(gitHubTarget(c), remote, data)).revision : (await request(c, {method: 'PUT', body: JSON.stringify({revision: remote.revision, data})})).revision;
       if (!Number.isInteger(remoteRevision) || remoteRevision !== remote.revision + 1) throw new Error('保存結果を確認できません。再度同期してください。');
     }
     // Do not replace local data after settings were disconnected/reconfigured.
