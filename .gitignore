@@ -48,3 +48,6 @@ next-env.d.ts
 # GitHub Pages build output
 /dist-pages/
 tsconfig.tsbuildinfo
+
+# Standalone HTML intermediate build output
+/dist-offline/
