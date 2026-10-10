@@ -28,10 +28,11 @@ const contexts = await Promise.all([390, 1280].map(width => browser.newContext({
 if(offlineFile)await contexts[1].addInitScript(()=>{if(navigator.locks)navigator.locks.request=()=>Promise.reject(new DOMException('Test opaque origin','SecurityError'));});
 let offlineServer;
 if (offlineFile) {const html = await readFile(offlineFile);offlineServer = createServer((req,res) => {res.writeHead(200, {'Content-Type':'text/html'});res.end(html);});await new Promise(resolve => offlineServer.listen(5181,'127.0.0.1',resolve));}
-const offlineContexts = new WeakSet();
+const offlineContexts = new WeakSet(), delayedContexts = new WeakSet();
 async function setOffline(context,value){if(value)offlineContexts.add(context);else offlineContexts.delete(context);await context.setOffline(value);}
 if (githubMode) for (const context of contexts) await context.route('https://api.github.com/**', async route => {
  if(offlineContexts.has(context))return route.abort('internetdisconnected');
+ if(delayedContexts.has(context))await new Promise(resolve=>setTimeout(resolve,300));
  const request = route.request(), u = new URL(request.url());
  assert.equal(request.headers().authorization, 'Bearer '+key);
  assert(u.pathname.startsWith('/repos/test/private-data'));
@@ -57,11 +58,16 @@ async function pair(p) {await open(p);const dialog = p.getByRole('dialog');if(gi
 async function record(p, minutes) {await p.getByRole('button', {name: /^(この教材で)?記録する$/}).click();const form = p.locator('.manual-form');await form.getByLabel('学習時間の時間', {exact: true}).fill('0');await form.getByLabel('学習時間の分', {exact: true}).fill(String(minutes));await form.getByRole('button', {name: '保存', exact: true}).click();await p.getByRole('dialog').waitFor({state: 'hidden'});}
 try {
  const [phone, pc] = await Promise.all(contexts.map(c => c.newPage()));
- for (const p of [phone, pc]) {p.on('pageerror', e => errors.push(e.message));await p.goto((p===pc?pcBase:base) + '#materials');await p.locator('.context').waitFor();}
+ for (const p of [phone, pc]) {p.on('pageerror', e => errors.push(e.message));await p.goto((p===pc?pcBase:base) + '#materials');await p.locator('.context').waitFor();await p.locator('.sync-status[data-phase=disconnected]').waitFor();}
  const d = A.emptyData();d.subjects = [{id: 'math', name: '数学', color: '#b33c88'}];d.materials = [{id: 'gold', name: 'Focus Gold', subject_id: 'math'}];d.study_records = [{id: 'seed', source: 'studyplus', source_id: 'seed', date: A.today(), subject_id: 'math', material_id: 'gold', duration_minutes: 30}];
  await phone.locator('input[type=file]').setInputFiles({name: 'test.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(d))});await phone.getByRole('button', {name: 'この内容で追加する', exact: true}).click();await phone.getByRole('dialog').waitFor({state: 'hidden'});
- await pair(phone);await pair(pc);assert.equal((await stored(pc)).data.subjects[0].color, '#b33c88');
- await setOffline(contexts[1],true);await record(pc, 18);assert.equal((await stored(pc)).data.study_records.length, 2);
+ await pair(phone);await pair(pc);await phone.locator('.sync-status[data-phase=synced]').waitFor();await pc.locator('.sync-status[data-phase=synced]').waitFor();assert.equal((await stored(pc)).data.subjects[0].color, '#b33c88');
+ if(githubMode){
+  await open(pc);delayedContexts.add(contexts[1]);await pc.getByRole('button',{name:'今すぐ同期',exact:true}).click();await pc.locator('.sync-status[data-phase=syncing]').waitFor({state:'attached'});await pc.getByRole('button',{name:'今すぐ同期',exact:true}).waitFor();await wait(()=>pc.getByRole('button',{name:'今すぐ同期',exact:true}).isEnabled());delayedContexts.delete(contexts[1]);
+  offlineContexts.add(contexts[1]);await pc.getByRole('button',{name:'今すぐ同期',exact:true}).click();await pc.locator('.sync-status[data-phase=error]').waitFor({state:'attached'});await pc.keyboard.press('Escape');await pc.locator('.sync-status[data-phase=error]').waitFor();offlineContexts.delete(contexts[1]);
+  await pc.locator('.sync-status').click();await pc.getByRole('button',{name:'今すぐ同期',exact:true}).click();await pc.locator('.sync-status[data-phase=synced]').waitFor({state:'attached'});await pc.keyboard.press('Escape');
+ }
+ await setOffline(contexts[1],true);await pc.locator('.sync-status[data-phase=offline]').waitFor();await record(pc, 18);assert.equal((await stored(pc)).data.study_records.length, 2);
  await record(phone, 17);await wait(async () => (await remote()).data.study_records.length === 2);
  await setOffline(contexts[1],false);await pc.evaluate(() => dispatchEvent(new Event('online')));await wait(async () => (await remote()).data.study_records.length === 3);
  await open(phone);await phone.getByRole('button', {name: '今すぐ同期', exact: true}).click();await wait(async () => (await stored(phone)).data.study_records.length === 3);await phone.keyboard.press('Escape');
@@ -72,7 +78,7 @@ try {
  // Two devices change the same field: retain both versions and stop syncing.
  async function edit(p, minutes) {await p.evaluate(minutes => new Promise((resolve, reject) => {const r = indexedDB.open('studyplus-dashboard:/studyplus/');r.onsuccess = () => {const db = r.result, tx = db.transaction('state', 'readwrite'), store = tx.objectStore('state'), q = store.get('main');q.onsuccess = () => {const s = q.result;s.data.study_records[0].duration_minutes = minutes;s.revision++;store.put(s, 'main');};tx.oncomplete = () => {db.close();resolve();};tx.onabort = () => reject(tx.error);};}), minutes);}
  await setOffline(contexts[1],true);await edit(pc, 99);await edit(phone, 51);await phone.reload();await wait(async () => (await remote()).data.study_records[0].duration_minutes === 51);
- await setOffline(contexts[1],false);await pc.reload();await pc.locator('.context').waitFor();await open(pc);await pc.getByText(/^競合が/).waitFor();assert.equal((await stored(pc)).data.study_records[0].duration_minutes, 99);assert.equal((await remote()).data.study_records[0].duration_minutes, 51);
- await pc.getByRole('button', {name: 'この端末の同期を解除'}).click();assert.equal((await stored(pc)).data.study_records.length, 3);assert.deepEqual(errors, []);
+ await setOffline(contexts[1],false);await pc.reload();await pc.locator('.context').waitFor();await pc.locator('.sync-status[data-phase=conflict]').waitFor();await pc.locator('.sync-status').click();await pc.getByText(/^競合が/).waitFor();assert.equal((await stored(pc)).data.study_records[0].duration_minutes, 99);assert.equal((await remote()).data.study_records[0].duration_minutes, 51);
+ await pc.getByRole('button', {name: 'この端末の同期を解除'}).click();await pc.keyboard.press('Escape');await pc.locator('.sync-status[data-phase=disconnected]').waitFor();assert.equal((await stored(pc)).data.study_records.length, 3);assert.deepEqual(errors, []);
  console.log('PASS '+(githubMode?'mock GitHub API':'local Worker/D1')+' browser sync ('+(offlineFile?'Pages + standalone HTML':'two Pages clients')+'): two isolated devices, initial pairing, offline additions/merge, no-op convergence, private-key exclusion, edit conflicts without overwrite, disconnect preserves records');
 } finally {await browser.close();await mf.dispose();if(offlineServer)await new Promise(resolve => offlineServer.close(resolve));}
