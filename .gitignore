@@ -51,3 +51,7 @@ tsconfig.tsbuildinfo
 
 # Standalone HTML intermediate build output
 /dist-offline/
+
+# Local sync deployment configuration and secrets
+/sync-worker/.dev.vars
+/sync-worker/wrangler.local.jsonc

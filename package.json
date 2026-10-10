@@ -14,7 +14,8 @@
     "db:generate": "drizzle-kit generate",
     "build:pages": "vite build --config vite.pages.config.ts",
     "prepare:pages": "node scripts/prepare-pages.mjs",
-    "build:offline": "node scripts/build-offline.mjs"
+    "build:offline": "node scripts/build-offline.mjs",
+    "deploy:sync": "node scripts/deploy-sync.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

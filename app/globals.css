@@ -123,3 +123,11 @@ table{font-size:.8125rem;font-variant-numeric:tabular-nums}th{background:#f5f8fc
 
 .browser-storage-label{background:transparent;border:0;padding:0;min-height:24px;color:var(--muted-foreground);font-size:.6875rem;text-decoration:underline;text-underline-offset:3px}
 @media(max-width:767px){.context .browser-storage-label{order:3;flex-basis:100%;justify-content:flex-start;min-height:32px;font-size:.75rem}}
+
+/* Device sync controls use the existing dialog and field styles. */
+.sync-dialog { max-height: calc(100dvh - 32px); overflow-y: auto; }
+.sync-dialog input { width: 100%; min-width: 0; min-height: 44px; }
+.sync-dialog pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 240px; overflow: auto; }
+.sync-dialog summary { overflow-wrap: anywhere; min-height: 44px; }
+.sync-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.sync-actions button { min-height: 44px; }

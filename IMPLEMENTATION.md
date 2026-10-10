@@ -109,3 +109,11 @@ PC・タブレットの既存DOM構成は維持。スマホだけ、`MobileAnaly
 ユーザーの追加承認により、GitHub Pages版を認証なし・端末内保存で公開。`lib/state-request.ts`は既存のSites API呼出を維持し、Pagesビルドのみ `github-pages/state-request.ts` に置換する。IndexedDBのreadwrite transactionとrevisionで複数タブの競合・保存失敗を検出し、既存JSON形式・削除時の設定保持・入力保持を維持。保存先の案内とJSONバックアップへの導線を追加。
 
 Pagesは既存のmain/ルート設定を利用。生成したpages-entry.htmlとpages-assetsを既存のPagesワークフローが公開する。Pages設定変更APIは連携権限不足のため使用しない。Sitesのデータ・認証・D1構成とオフラインHTMLは変更なし。移行と更新手順はGITHUB_PAGES.md。
+
+## 端末間同期
+
+GitHub Pagesと単体HTMLに任意接続の共有同期画面を追加。未接続では従来のIndexedDB保存のみ。Cloudflare Workerと専用D1を用意し、HTTPS/Bearerキー認証・送信元制限・版番号CAS・分割JSONの一括更新で共有保存する。Sitesの管理D1は使用しない。
+
+lib/sync-merge.tsで最終同期・端末・共有の三者比較を行い、別の追加や別項目の変更を統合。同一項目の編集や削除と編集の競合は停止し両方保持。キーと同期基準はDataとは別のIndexedDBに保存し、JSONには含めない。入力中は同期を待機し、通信失敗でも端末内保存を維持。教材並び順はprofile.material_sortにも保存し同期するが、Sites版は既存のローカル保存を維持。
+
+初回Cloudflare公開手順・未確認事項はSYNC_SETUP.md。共有APIの本番公開と二端末の実機同期は、Cloudflare認証がこの環境にない場合は未完了として扱う。

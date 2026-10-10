@@ -1,0 +1,8 @@
+{
+  "name": "studyplus-sync",
+  "main": "worker.ts",
+  "compatibility_date": "2026-05-15",
+  "workers_dev": true,
+  "vars": {"ALLOWED_ORIGINS": "https://neimoasorao-dotcom.github.io,null"},
+  "d1_databases": [{"binding": "DB", "database_name": "studyplus-sync", "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID"}]
+}
