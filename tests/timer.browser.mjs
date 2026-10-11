@@ -52,8 +52,9 @@ async function checkClosedTimerPlacement(p) {
   const banner=await p.locator(selector).boundingBox();assert(banner.x>=0&&banner.x+banner.width<=width+1);
   if(width>=768){
    assert.equal(await p.locator('main .timer-banner').count(),0,'no desktop header duplicate');
-   const settings=await p.locator('[data-slot=sidebar-footer]').getByRole('button',{name:'設定',exact:true}).boundingBox();
-   assert(banner.y+banner.height<=settings.y&&settings.y-banner.y-banner.height<=12,'timer is immediately above Settings');
+   assert.equal(await p.locator('[data-slot=sidebar-footer]').getByRole('button',{name:'設定',exact:true}).count(),0);
+   const settings=await p.locator('.private-label').boundingBox();
+   assert(banner.y+banner.height<=settings.y&&settings.y-banner.y-banner.height<=12,'timer stays in sidebar footer');
    await p.evaluate(()=>scrollTo(0,500));const scrolled=await p.locator(selector).boundingBox();assert.equal(scrolled.y,banner.y,'sidebar timer stays visible when content scrolls');
   }
   if(width<=767){
