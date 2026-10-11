@@ -82,11 +82,11 @@ export function StudyRecorder({data,materialId,saving,blocked,bannerTarget,onOpe
  const disabled=busy||saving;
  const mobileTime=timer?timer.mode==='pomodoro'&&timer.status!=='review'?`${phases[timer.phase]} ${clockText(elapsed!.remainingMs)}`:`${timer.mode==='stopwatch'?'経過':'学習'} ${clockText(elapsed!.studyMs)}`:'';
  const timerSubject=timer?data.subjects.find(s=>s.id===timer.subjectId)?.name||'科目未設定':'';
- const banner=timer&&materialId===null?<button className="timer-banner" onClick={()=>onOpen(timer.materialId)} aria-label={`学習タイマーを開く：${label}${isMobile?`、${mobileTime}、${timerSubject}`:''}`}>
- {isMobile?<><span className="timer-banner-state">{{running:'計測中',paused:'停止中',waiting:'待機',review:'保存待ち'}[timer.status]}</span><strong className="timer-banner-time">{mobileTime}</strong><span className="timer-banner-subject" title={timerSubject}>{timerSubject}</span><span className="timer-banner-open">開く</span></>:<><span>{restored?'計測を復元 · ':''}{label}</span><strong>{clockText(elapsed!.studyMs)}</strong><span className="timer-banner-name">{data.materials.find(m=>m.id===timer.materialId)?.name||data.subjects.find(s=>s.id===timer.subjectId)?.name||'科目を確認'}</span><span>開く</span></>}
+ const banner=timer&&materialId===null?<button className="timer-banner" data-status={timer.status} data-phase={timer.phase} onClick={()=>onOpen(timer.materialId)} aria-label={`学習タイマーを開く：${label}${isMobile?`、${mobileTime}、${timerSubject}`:''}`}>
+ {isMobile?<strong className="timer-banner-time">{clockText(timer.mode==='pomodoro'&&timer.status!=='review'?elapsed!.remainingMs:elapsed!.studyMs)}</strong>:<><span>{restored?'計測を復元 · ':''}{label}</span><strong>{clockText(elapsed!.studyMs)}</strong><span className="timer-banner-name">{data.materials.find(m=>m.id===timer.materialId)?.name||data.subjects.find(s=>s.id===timer.subjectId)?.name||'科目を確認'}</span><span>開く</span></>}
  </button>:null;
  return <>
- {bannerTarget&&!isMobile?createPortal(banner,bannerTarget):banner}
+ {bannerTarget?createPortal(banner,bannerTarget):banner}
  {error&&materialId===null&&<div className="notice error" role="alert">{error}<button onClick={()=>{void reload();}}>タイマーを再読込</button></div>}
  <Dialog open={materialId!==null} onOpenChange={open=>{if(!open&&!disabled)onOpen(null);}}><DialogContent placement="responsive-sheet" className="manual-dialog recorder-dialog" style={viewport} showCloseButton={!disabled} onEscapeKeyDown={e=>{if(disabled)e.preventDefault();}} onPointerDownOutside={e=>e.preventDefault()}>
  <div className="manual-handle"/><DialogHeader><DialogTitle>{timer&&method!=='manual'&&timer.status==='review'?'計測結果を保存':'学習記録を追加'}</DialogTitle><DialogDescription className="sr-only">手入力、ストップウォッチ、ポモドーロから記録方法を選択します。</DialogDescription></DialogHeader>

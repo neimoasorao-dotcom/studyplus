@@ -199,3 +199,30 @@ table{font-size:.8125rem;font-variant-numeric:tabular-nums}th{background:#f5f8fc
  .more-dialog [data-slot=dialog-title]{min-width:0;overflow-wrap:anywhere}
  .more-dialog .more-close{flex:none;width:44px;height:44px;min-height:44px;padding:0}
 }
+
+/* Compact phone navigation and indicators; desktop timer stays in the sidebar. */
+.sync-settings{display:grid;gap:12px;border-top:1px solid var(--border);padding-top:12px;min-width:0}
+.sync-settings h2{font-size:.875rem;font-weight:600}
+@keyframes indicator-blink{0%,100%{opacity:1}50%{opacity:.25}}
+@media(max-width:767px){
+ .context{display:none}
+ .mobile-nav{grid-template-columns:repeat(8,minmax(0,1fr));padding-left:4px;padding-right:4px}
+ .mobile-nav button{min-width:0;min-height:48px;padding:4px 0;font-size:.625rem;gap:3px;white-space:nowrap}
+ .mobile-nav button span{max-width:100%}
+ .topbar{gap:6px}
+ .top-actions{gap:4px}
+ .top-actions .record-add{padding:8px 6px;gap:4px;white-space:nowrap}
+ .utility-trigger{position:relative;overflow:visible}
+ .sync-dot{position:absolute;top:2px;right:2px;width:10px;height:10px;border-radius:50%;background:var(--destructive);border:2px solid var(--card);box-sizing:content-box;pointer-events:none}
+ .sync-dot[data-phase="synced"]{background:var(--success)}
+ .sync-dot[data-phase="syncing"]{background:#eab308;animation:indicator-blink 1s ease-in-out infinite}
+ .mobile-timer-slot:empty{display:none}
+ .mobile-timer-slot{flex:none;min-width:0}
+ .top-actions .timer-banner{position:static;display:flex;width:auto;height:44px;min-height:44px;margin:0;padding:0 4px;border:0;background:transparent;gap:0}
+ .top-actions .timer-banner .timer-banner-time{font-size:.875rem;white-space:nowrap;color:var(--primary);font-variant-numeric:tabular-nums}
+ .top-actions .timer-banner[data-phase="shortBreak"] .timer-banner-time,.top-actions .timer-banner[data-phase="longBreak"] .timer-banner-time{color:var(--chart-3)}
+ .top-actions .timer-banner[data-status="paused"] .timer-banner-time{animation:indicator-blink 1s ease-in-out infinite}
+}
+@media(max-width:767px) and (prefers-reduced-motion:reduce){
+ .sync-dot[data-phase="syncing"],.top-actions .timer-banner[data-status="paused"] .timer-banner-time{animation:none;opacity:.6}
+}
