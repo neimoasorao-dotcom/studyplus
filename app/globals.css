@@ -279,3 +279,21 @@ table{font-size:.8125rem;font-variant-numeric:tabular-nums}th{background:#f5f8fc
 .timer-pip-trigger:hover,.timer-pip-trigger[aria-pressed="true"]{color:var(--primary);background:var(--secondary)}
 @media(pointer:coarse){.timer-pip-trigger{width:44px;min-height:44px}}
 @media(max-width:767px){.timer-pip-trigger{display:none}}
+
+/* Neutral dark surfaces; role colors change without altering user subject colors. */
+:root.dark{--background:#11151C;--foreground:#E6EAF2;--card:#1B2029;--card-foreground:#E6EAF2;--popover:#1B2029;--popover-foreground:#E6EAF2;--primary:#8BB6FF;--primary-foreground:#101A2A;--secondary:#252C38;--secondary-foreground:#CBD3E0;--muted:#252C38;--muted-foreground:#A5AFBF;--accent:#26354C;--accent-foreground:#A8C8FF;--destructive:#FF9DA7;--border:#394252;--input:#76859B;--ring:#8BB6FF;--sidebar:#171C25;--sidebar-foreground:#A5AFBF;--sidebar-primary:#8BB6FF;--sidebar-primary-foreground:#101A2A;--sidebar-accent:#26354C;--sidebar-accent-foreground:#A8C8FF;--sidebar-border:#394252;--sidebar-ring:#8BB6FF;--primary-hover:#ABC9FF;--primary-subtle:#26354C;--highlight:#D7B37C;--highlight-subtle:#302A21;--success:#82D4A2;--success-subtle:#1B3026;--warning:#EDC878;--warning-subtle:#352E1C;--destructive-foreground:#221216;--destructive-subtle:#35232A;--destructive-border:#A8616B;--destructive-hover:#FFB9C0;--focus-halo:#8BB6FF50;--shadow-soft:#00000040;--nav-surface:#171C25F5;--chart-1:#8BB6FF;--chart-2:#99A9C2;--chart-3:#86C7BE;--chart-4:#B9A5E0;--chart-5:#D7B37C;--chart-6:#DD9CAF;--chart-comparison:#99A9C2;--chart-target:#D7B37C;--chart-unknown:#A5AFBF;color-scheme:dark}
+.dark body{color:var(--foreground)}
+.dark .selector-toolbar .pick{background:var(--secondary);border-color:var(--border)}
+.dark .data-detail{border-color:var(--border)}
+.dark th{background:var(--secondary);color:var(--muted-foreground)!important}
+.dark .logic{background:var(--secondary)}
+.page-heading{display:flex;align-items:center;gap:4px;min-width:0}
+.page-heading h1{min-width:0;overflow-wrap:anywhere}
+.color-mode-toggle{flex:none;width:32px;min-height:32px;padding:6px;border-color:transparent;background:transparent;color:var(--muted-foreground)}
+.color-mode-toggle[data-mode="light"]{color:var(--highlight)}
+.color-mode-toggle[data-mode="dark"]{color:var(--primary)}
+.color-mode-toggle:hover{background:var(--secondary)}
+@media(pointer:coarse){.color-mode-toggle{width:44px;min-height:44px}}
+:root{--chart-cursor:#CCCCCC}
+:root.dark{--chart-cursor:var(--secondary)}
+.dark .recharts-legend-item-text,.dark .recharts-tooltip-item{color:var(--foreground)!important}

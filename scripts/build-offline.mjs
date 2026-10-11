@@ -1,11 +1,13 @@
-import {build, mergeConfig} from 'vite';
+import {build, mergeConfig, loadConfigFromFile} from 'vite';
 import {readFile, writeFile, mkdir} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
-import pagesConfig from '../vite.pages.config.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = path.join(root, 'dist-offline');
+const loaded = await loadConfigFromFile({command: 'build', mode: 'production'}, path.join(root, 'vite.pages.config.ts'));
+if (!loaded) throw new Error('Pages build configuration could not be loaded');
+const pagesConfig = loaded.config;
 await build(mergeConfig(pagesConfig, {
   configFile: false,
   base: './',
