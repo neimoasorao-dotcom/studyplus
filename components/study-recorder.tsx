@@ -13,6 +13,7 @@ import {timerControlled} from '../lib/shared-timer';
 import {synchronizeTimer,changeSharedTimer,takeOverTimer,acceptRemoteTimer} from '../github-pages/timer-sync';
 import {synchronize} from '../github-pages/device-sync';
 import {PomodoroIndicator} from './pomodoro-indicator';
+import {TimerMiniContent,useTimerPictureInPicture} from './timer-picture-in-picture';
 
 type TimerRecord=ReturnType<typeof buildManualRecord> & {timer?:{mode:StudyTimer['mode'];elapsed_seconds:number;completed_sets:number;config?:TimerConfig}};
 type Props={shareTimer?:boolean;onSharedRecordsApplied?:()=>Promise<void>;initialSubject?:string;onTimerChange?:(timer:StudyTimer|null)=>void;onTimerControlChange?:(readOnly:boolean)=>void;data:Data;date:string;materialId:string|null;saving:boolean;blocked:boolean;bannerTarget?:HTMLElement|null;onOpen:(material:string|null)=>void;onSave:(record:TimerRecord)=>Promise<boolean>;onSettings:()=>void};
@@ -28,6 +29,8 @@ export function StudyRecorder({data,materialId,saving,blocked,bannerTarget,onOpe
  function accept(s:TimerState){state.current=s;setStored(s);}
  const canOperate=!stored?.sharing || timerControlled(stored.sharing);
  const timer=rawTimer&&!canOperate?settleTimer(rawTimer,now):rawTimer;
+ const timerName=timer?data.materials.find(m=>m.id===timer.materialId)?.name||data.subjects.find(s=>s.id===timer.subjectId)?.name||'科目を確認':'';
+ const pip=useTimerPictureInPicture(timer,timerName,now,setNow);
  useEffect(()=>{onTimerControlChange?.(!canOperate);},[canOperate,onTimerControlChange]);
  async function refreshSharing(){
   if(!shareTimer||operating.current)return;
@@ -62,11 +65,11 @@ export function StudyRecorder({data,materialId,saving,blocked,bannerTarget,onOpe
  useEffect(()=>{
   if(!shareTimer)return;
   let stopped=false,inFlight=false,delay=15000,timeout:ReturnType<typeof setTimeout>;
-  const poll=async()=>{if(stopped||inFlight)return;inFlight=true;clearTimeout(timeout);if(document.visibilityState==='visible'&&!operating.current){try{const s=await synchronizeTimer();if(!stopped){accept(s);setShareMessage(navigator.onLine||!s.sharing?'':'オフライン：表示は最終確認時点の共有状態です。端末内の変更は通信復帰後に送信します。');}delay=s.timer||s.sharing?.pending?15000:30000;}catch(e){if(!stopped)setShareMessage((e as Error).message);delay=Math.min(delay*2,120000);}}inFlight=false;if(!stopped)timeout=setTimeout(poll,delay);};
+  const poll=async()=>{if(stopped||inFlight)return;inFlight=true;clearTimeout(timeout);if((document.visibilityState==='visible'||pip.isOpen)&&!operating.current){try{const s=await synchronizeTimer();if(!stopped){accept(s);setShareMessage(navigator.onLine||!s.sharing?'':'オフライン：表示は最終確認時点の共有状態です。端末内の変更は通信復帰後に送信します。');}delay=s.timer||s.sharing?.pending?15000:30000;}catch(e){if(!stopped)setShareMessage((e as Error).message);delay=Math.min(delay*2,120000);}}inFlight=false;if(!stopped)timeout=setTimeout(poll,delay);};
   const wake=()=>{clearTimeout(timeout);void poll();};
   timeout=setTimeout(poll,1000);window.addEventListener('focus',wake);window.addEventListener('online',wake);window.addEventListener('offline',wake);document.addEventListener('visibilitychange',wake);
   return()=>{stopped=true;clearTimeout(timeout);window.removeEventListener('focus',wake);window.removeEventListener('online',wake);window.removeEventListener('offline',wake);document.removeEventListener('visibilitychange',wake);};
- },[shareTimer]);
+ },[shareTimer,pip.isOpen]);
  function broadcast(){if(typeof BroadcastChannel!=='undefined'){const c=new BroadcastChannel('studyplus-timer');c.postMessage('changed');c.close();}}
  async function change(update:(t:StudyTimer|null)=>StudyTimer|null,nextConfig?:TimerConfig,terminal:'saved'|'discarded'='discarded'){
   if(operating.current||!state.current)return false;
@@ -126,10 +129,12 @@ export function StudyRecorder({data,materialId,saving,blocked,bannerTarget,onOpe
  const mobileTime=timer?timer.mode==='pomodoro'&&timer.status!=='review'?`${phases[timer.phase]} ${clockText(elapsed!.remainingMs)}`:`${timer.mode==='stopwatch'?'経過':'学習'} ${clockText(elapsed!.studyMs)}`:'';
  const timerSubject=timer?data.subjects.find(s=>s.id===timer.subjectId)?.name||'科目未設定':'';
  const banner=timer&&materialId===null?<button className="timer-banner" data-status={timer.status} data-phase={timer.phase} onClick={()=>onOpen(timer.materialId)} aria-label={`学習タイマーを開く：${restored?'計測を復元、':''}${label}、${mobileTime}、${timerSubject}`}>
- <strong className="timer-banner-time">{clockText(timer.mode==='pomodoro'&&timer.status!=='review'?elapsed!.remainingMs:elapsed!.studyMs)}</strong>{!isMobile&&<span className="timer-banner-name">{data.materials.find(m=>m.id===timer.materialId)?.name||data.subjects.find(s=>s.id===timer.subjectId)?.name||'科目を確認'}</span>}
+ <TimerMiniContent timer={timer} now={now} name={timerName} showName={!isMobile}/>
  </button>:null;
  return <>
- {bannerTarget?createPortal(banner,bannerTarget):banner}
+ {bannerTarget?createPortal(banner&&!isMobile?<div className="timer-banner-group">{banner}{pip.icon}</div>:banner,bannerTarget):banner}
+ {pip.view}
+ {pip.error&&<div className="notice error" role="alert">{pip.error}</div>}
  {error&&materialId===null&&<div className="notice error" role="alert">{error}<button onClick={()=>{void reload();}}>タイマーを再読込</button></div>}
  <Dialog open={materialId!==null} onOpenChange={open=>{if(!open&&!disabled)onOpen(null);}}><DialogContent placement="responsive-sheet" className="manual-dialog recorder-dialog" style={viewport} showCloseButton={!disabled} onEscapeKeyDown={e=>{if(disabled)e.preventDefault();}} onPointerDownOutside={e=>e.preventDefault()}>
  <div className="manual-handle"/><DialogHeader><DialogTitle>{timer&&method!=='manual'&&timer.status==='review'?'計測結果を保存':'学習記録を追加'}</DialogTitle><DialogDescription className="sr-only">手入力、ストップウォッチ、ポモドーロから記録方法を選択します。</DialogDescription></DialogHeader>

@@ -3,7 +3,7 @@ import * as A from '../lib/analysis.ts';
 const d=A.emptyData();d.subjects=[{id:'math',name:'数学',ideal_ratio:.5,target_days_per_week:7},{id:'en',name:'英語',ideal_ratio:.5,target_days_per_week:7}];d.goals.site.weekly_total_minutes=1400;
 for(const date of A.dates('2026-09-01','2026-10-08'))for(const s of d.subjects)d.study_records.push({date,subject_id:s.id,duration_minutes:100});
 const s=A.scores(d,'2026-10-05','2026-10-08');assert.equal(s.balance,100);assert.equal(s.time,100);assert.equal(s.zero,100);assert.equal(A.round(s.continuity),57.1);assert.equal(A.round(s.stability),95.7);assert.equal(A.round(s.condition),97.4);
-const w=A.week(d,'2026-10-08');assert.equal(w.elapsed,4);assert.equal(w.remaining,4);assert.equal(w.current,800);assert.equal(w.projected,1400);assert.equal(w.required,150);assert.equal(w.status,'ON TRACK');assert.equal(A.weekStart('2026-10-08','sunday'),'2026-10-04');
+const w=A.week(d,'2026-10-08','2026-10-08');assert.equal(w.elapsed,4);assert.equal(w.remaining,4);assert.equal(w.current,800);assert.equal(w.projected,1400);assert.equal(w.required,150);assert.equal(w.status,'ON TRACK');assert.equal(A.weekStart('2026-10-08','sunday'),'2026-10-04');
 const sunday=A.week(d,'2026-10-11','2026-10-11');assert.equal(sunday.remaining,1);assert.equal(sunday.required,600);assert.equal(sunday.status,'OFF TRACK');assert.equal(A.week(d,'2026-10-11','2026-10-12').status,'NOT ACHIEVED');
 assert.equal(A.scores(A.emptyData(),'2026-10-05','2026-10-08').condition,null);
 const partial={...d,study_records:d.study_records.filter(r=>r.date>='2026-10-07')};assert.equal(A.scores(partial,'2026-10-05','2026-10-08').condition,null);

@@ -271,3 +271,11 @@ table{font-size:.8125rem;font-variant-numeric:tabular-nums}th{background:#f5f8fc
 .timer-sharing p {margin:0;flex-basis:100%;overflow-wrap:anywhere;}
 .timer-sharing p:empty {display:none;}
 .timer-sharing button {min-height:44px;max-width:100%;white-space:normal;}
+
+/* PC-only launcher; the floating display has no study controls. */
+.timer-banner-group{display:flex;align-items:flex-start;gap:4px;min-width:0}
+.timer-banner-group>.timer-banner{flex:1;min-width:0}
+.timer-pip-trigger{flex:none;width:32px;min-height:32px;padding:4px;display:grid;place-items:center;color:var(--muted-foreground);background:transparent;border-color:transparent}
+.timer-pip-trigger:hover,.timer-pip-trigger[aria-pressed="true"]{color:var(--primary);background:var(--secondary)}
+@media(pointer:coarse){.timer-pip-trigger{width:44px;min-height:44px}}
+@media(max-width:767px){.timer-pip-trigger{display:none}}
