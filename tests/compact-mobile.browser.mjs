@@ -22,7 +22,7 @@ try{
  await p.getByRole('button',{name:'この内容で追加する',exact:true}).click();await p.getByRole('dialog').waitFor({state:'hidden'});
  for(const width of [360,375,390,430]){
   await p.setViewportSize({width,height:width===375?667:740});
-  assert.equal(await p.locator('.mobile-nav button').count(),8);
+  assert.equal(await p.locator('.mobile-nav button').count(),7);
   assert.equal(await p.getByRole('button',{name:'その他',exact:true}).count(),0);
   for(const [label,hash] of [['ホーム','dashboard'],['学習時間','time'],['科目','subjects'],['教材','materials'],['目標','goals'],['模試','exams'],['AI分析','ai']]){
    const button=p.locator('.mobile-nav').getByRole('button',{name:label,exact:true});
@@ -31,7 +31,8 @@ try{
    assert.equal(await button.getAttribute('aria-current'),'page');
    assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${width}:${hash}: no overflow`);
   }
-  await p.locator('.mobile-nav').getByRole('button',{name:'設定',exact:true}).click();
+  assert.equal(await p.locator('.mobile-nav').getByRole('button',{name:'設定',exact:true}).count(),0);
+  await p.getByRole('button',{name:'データ・設定メニュー'}).click();
   const dialog=p.getByRole('dialog');await dialog.getByRole('heading',{name:'データ・設定',exact:true}).waitFor();
   assert(await dialog.getByRole('heading',{name:'端末間の同期',exact:true}).isVisible());
   assert(await dialog.getByRole('button',{name:'全データをJSON出力',exact:true}).isVisible());
@@ -46,18 +47,19 @@ try{
   if(status==='paused')timer=pauseTimer(timer,now);
   await p.evaluate(timer=>new Promise((resolve,reject)=>{const req=indexedDB.open('studyplus-timer-v1',1);req.onsuccess=()=>{const db=req.result,tx=db.transaction('timer','readwrite');tx.objectStore('timer').put({revision:100,timer,config:timer.config},'main');tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>reject(tx.error);};req.onerror=()=>reject(req.error);}),timer);
   await p.reload();await p.locator('.timer-banner').waitFor();
-  for(const width of [360,375,390,430]){
-   await p.setViewportSize({width,height:740});const banner=p.locator('.mobile-timer-slot .timer-banner');await banner.waitFor();
+  for(const width of [360,375,390,430,1280,1440]){
+   await p.setViewportSize({width,height:740});const banner=p.locator(width<=767?'.mobile-timer-slot .timer-banner':'.sidebar-timer-slot .timer-banner');await banner.waitFor();
    const box=await banner.boundingBox(),add=await p.locator('.top-actions .record-add').boundingBox();
-   assert(box.x+box.width<=add.x&&Math.abs(box.y-add.y)<1,'timer is left of Add in same row');
-   assert(box.height>=44,'timer tap target');assert.equal(await banner.textContent(),mode==='stopwatch'?'00:00':phase==='focus'?'25:00':'05:00');
+   if(width<=767)assert(box.x+box.width<=add.x&&Math.abs(box.y-add.y)<1,'timer is left of Add in same row');
+   else{assert.equal(await p.locator('.side').getByRole('button',{name:'設定',exact:true}).count(),0);assert(!/計測中|開く/.test(await banner.textContent()));await p.locator('.top-actions').getByRole('button',{name:'設定',exact:true}).click();await p.getByRole('dialog').getByRole('heading',{name:'設定・データ管理',exact:true}).waitFor();await p.keyboard.press('Escape');await p.getByRole('dialog').waitFor({state:'hidden'});}
+   assert(box.height>=44,'timer tap target');assert.equal(await banner.locator('.timer-banner-time').textContent(),mode==='stopwatch'?'00:00':phase==='focus'?'25:00':'05:00');
    const colors=await color(p,'.timer-banner-time',phase==='focus'?'--primary':'--chart-3');assert.equal(colors[0],colors[1]);
    assert.equal(await p.locator('.timer-banner-time').evaluate(el=>getComputedStyle(el).animationName),status==='paused'?'indicator-blink':'none');
    assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${width}: timer header fits`);
-   if(width===390)await p.screenshot({path:`${folder}/${offline?'offline':'pages'}-${mode}-${phase}-${status}.png`});
+   if(width===390||width===1280)await p.screenshot({path:`${folder}/${offline?'offline':'pages'}-${width}-${mode}-${phase}-${status}.png`});
   }
   await p.emulateMedia({reducedMotion:'reduce'});assert.equal(await p.locator('.timer-banner-time').evaluate(el=>getComputedStyle(el).animationName),'none');await p.emulateMedia({reducedMotion:'no-preference'});
  }
  assert.deepEqual(errors,[]);
- console.log(`PASS compact mobile ${offline?'offline HTML (network disabled)':'Pages'}: eight keyboard-accessible nav targets at four widths, unified settings/sync dialog, red disconnected indicator, six timer states, color/blink/reduced-motion, header placement, no overflow`);
+ console.log(`PASS compact mobile ${offline?'offline HTML (network disabled)':'Pages'}: seven keyboard-accessible nav targets at four widths, unified settings/sync dialog, red disconnected indicator, six timer states at phone and PC widths, color/blink/reduced-motion, placement, no overflow`);
 }finally{await context.close();await browser.close();}

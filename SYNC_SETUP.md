@@ -25,7 +25,7 @@ Generate tokenを押し、github_pat_から始まる値をパスワードマネ�
 
 1. iPhoneは https://neimoasorao-dotcom.github.io/studyplus/ を再読込する。
 2. PCは最新版のoffline/studyplus_offline.zipをダウンロード・解凍しHTMLを開く。更新前にバックアップし、記録が空の場合はJSONを読み込む。
-3. 「データ・設定」を開き、同じ画面の「端末間の同期」を確認する。スマホでは右上のボタンまたは下部ナビの「設定」、PCでは同期状態のボタンから開ける。
+3. 「データ・設定」を開き、同じ画面の「端末間の同期」を確認する。スマホでは右上のボタン、PCでは同期状態のボタンから開ける。
 4. 同期方式は「GitHub非公開リポジトリ（Node不要）」を選ぶ。
 5. 保存先リポジトリはneimoasorao-dotcom/studyplus-data、ブランチはmain。
 6. その端末用のGitHubトークンを入力し、「接続して同期を開始」を押す。

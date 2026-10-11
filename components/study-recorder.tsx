@@ -82,8 +82,8 @@ export function StudyRecorder({data,materialId,saving,blocked,bannerTarget,onOpe
  const disabled=busy||saving;
  const mobileTime=timer?timer.mode==='pomodoro'&&timer.status!=='review'?`${phases[timer.phase]} ${clockText(elapsed!.remainingMs)}`:`${timer.mode==='stopwatch'?'経過':'学習'} ${clockText(elapsed!.studyMs)}`:'';
  const timerSubject=timer?data.subjects.find(s=>s.id===timer.subjectId)?.name||'科目未設定':'';
- const banner=timer&&materialId===null?<button className="timer-banner" data-status={timer.status} data-phase={timer.phase} onClick={()=>onOpen(timer.materialId)} aria-label={`学習タイマーを開く：${label}${isMobile?`、${mobileTime}、${timerSubject}`:''}`}>
- {isMobile?<strong className="timer-banner-time">{clockText(timer.mode==='pomodoro'&&timer.status!=='review'?elapsed!.remainingMs:elapsed!.studyMs)}</strong>:<><span>{restored?'計測を復元 · ':''}{label}</span><strong>{clockText(elapsed!.studyMs)}</strong><span className="timer-banner-name">{data.materials.find(m=>m.id===timer.materialId)?.name||data.subjects.find(s=>s.id===timer.subjectId)?.name||'科目を確認'}</span><span>開く</span></>}
+ const banner=timer&&materialId===null?<button className="timer-banner" data-status={timer.status} data-phase={timer.phase} onClick={()=>onOpen(timer.materialId)} aria-label={`学習タイマーを開く：${restored?'計測を復元、':''}${label}、${mobileTime}、${timerSubject}`}>
+ <strong className="timer-banner-time">{clockText(timer.mode==='pomodoro'&&timer.status!=='review'?elapsed!.remainingMs:elapsed!.studyMs)}</strong>{!isMobile&&<span className="timer-banner-name">{data.materials.find(m=>m.id===timer.materialId)?.name||data.subjects.find(s=>s.id===timer.subjectId)?.name||'科目を確認'}</span>}
  </button>:null;
  return <>
  {bannerTarget?createPortal(banner,bannerTarget):banner}
