@@ -265,3 +265,9 @@ table{font-size:.8125rem;font-variant-numeric:tabular-nums}th{background:#f5f8fc
 .today-context-link span{min-width:0;overflow-wrap:anywhere}.today-context-link small{display:block;color:var(--muted-foreground);font-size:.75rem}.today-context-link svg{flex:none}
 .daily-goal-edit{min-height:44px;flex:none}.daily-goal-dialog input{min-height:44px;width:100%;font-size:1rem}
 @media(max-width:767px){.today-home{grid-template-columns:minmax(0,1fr);gap:12px}.today-home .panel{padding:14px}.today-home .panel-head h2{font-size:.875rem}.daily-goal-edit{font-size:.75rem;padding:6px 8px}.today-total{font-size:2rem}.today-next select{font-size:1rem}.daily-goal-dialog{max-height:calc(100dvh - 24px);overflow-y:auto}.daily-goal-dialog button{min-height:44px}}
+
+/* Timer sharing details stay inside the existing recorder dialog. */
+.timer-sharing {border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;flex-wrap:wrap;gap:8px;min-width:0;font-size:13px;}
+.timer-sharing p {margin:0;flex-basis:100%;overflow-wrap:anywhere;}
+.timer-sharing p:empty {display:none;}
+.timer-sharing button {min-height:44px;max-width:100%;white-space:normal;}

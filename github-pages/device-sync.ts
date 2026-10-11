@@ -108,3 +108,9 @@ export function synchronize(canApply: () => boolean = () => true): Promise<SyncR
   running = promise;
   return promise;
 }
+
+// Only the timer transport uses this internally; credentials never enter timer JSON.
+export async function getTimerConnection() {
+ const c=await connection();
+ return c?.provider==='github'?{target:gitHubTarget(c),session:c.session}:null;
+}

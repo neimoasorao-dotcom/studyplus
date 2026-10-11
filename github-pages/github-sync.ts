@@ -20,7 +20,7 @@ export function decodeGitHubJSON(content: string): unknown {
   return JSON.parse(new TextDecoder('utf-8', {fatal: true}).decode(Uint8Array.from(binary, c => c.charCodeAt(0))));
 }
 type Remote = {revision: number; data: Data | null; sha?: string};
-async function api(target: GitHubTarget, path: string, init?: RequestInit) {
+export async function api(target: GitHubTarget, path: string, init?: RequestInit) {
   const response = await fetch('https://api.github.com/repos/' + target.repository + path, {...init, headers: {Authorization: 'Bearer ' + target.key, Accept: path.startsWith('/contents/') ? 'application/vnd.github.object+json' : 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(init ? {'Content-Type': 'application/json'} : {})}, credentials: 'omit', cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(15000)});
   if (response.ok || (!init && response.status === 404)) return response;
   if (response.status === 401) throw new Error('GitHubトークンが無効、または期限切れです。同期を解除して新しいトークンを設定してください。');
@@ -28,7 +28,7 @@ async function api(target: GitHubTarget, path: string, init?: RequestInit) {
   if (response.status === 403 || response.status === 429) throw new Error('GitHubへのアクセスが制限されています。トークンのContents権限、利用制限・リポジトリ設定を確認してください。');
   throw new Error('GitHubに接続できません。端末内の記録は保持されています。');
 }
-async function privateRepository(target: GitHubTarget) {
+export async function privateRepository(target: GitHubTarget) {
   const r = await api(target, '');
   if (!r.ok) throw new Error('非公開リポジトリが見つかりません。トークンの対象リポジトリを確認してください。');
   const metadata = await r.json() as {private?: boolean; default_branch?: string};
