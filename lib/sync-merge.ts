@@ -1,4 +1,4 @@
-import {emptyData, recordKey, type Data} from './analysis';
+import {emptyData, recordKey, validDailyTargets, type Data} from './analysis';
 
 const missing = Symbol('missing');
 type Value = unknown | typeof missing;
@@ -57,5 +57,5 @@ export function mergeSync(base: Data | null, local: Data | null, remote: Data | 
 }
 
 export function validateSyncData(data: unknown): data is Data {
-  return object(data) && ['subjects', 'materials', 'study_records', 'exam_results', 'imports'].every(k => Array.isArray(data[k])) && object(data.profile) && object(data.goals);
+  return object(data) && ['subjects', 'materials', 'study_records', 'exam_results', 'imports'].every(k => Array.isArray(data[k])) && object(data.profile) && object(data.goals) && (!object(data.goals.site)||data.goals.site.daily_targets===undefined||validDailyTargets(data.goals.site.daily_targets));
 }

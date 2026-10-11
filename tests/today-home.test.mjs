@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import * as A from '../lib/analysis.ts';
+import {registerHooks} from 'node:module';
+registerHooks({resolve(spec,context,next){return next(spec==='./analysis'?'./analysis.ts':spec,context);}});
+const {todayHome}=await import('../lib/today-home.ts');
+const {mergeSync,validateSyncData}=await import('../lib/sync-merge.ts');
+const date='2026-10-08',d=A.emptyData();
+d.subjects=[{id:'math',name:'数学',weekly_target_minutes:300,ideal_ratio:.5},{id:'en',name:'英語',weekly_target_minutes:300,ideal_ratio:.5}];
+d.goals.site.weekly_total_minutes=1200;
+d.study_records=[{id:'old',date:'2026-10-05',duration_minutes:400,subject_id:'en'},{id:'today',date,duration_minutes:60,subject_id:'math'},{id:'unknown',date,duration_minutes:20,subject_id:'gone'}];
+let h=todayHome(d,date);assert.equal(h.minutes,80);assert.equal(h.target,200);assert.equal(h.source,'週目標からの目安');assert.equal(h.remaining,120);assert.equal(h.candidate.id,'math');assert.equal(h.subjects.find(s=>s.id==='unknown').minutes,20);
+d.study_records.push({id:'more',date,duration_minutes:30,subject_id:'math'});assert.equal(todayHome(d,date).target,200,'weekly fallback excludes today and stays stable');assert.equal(todayHome(d,date).remaining,90);
+d.goals.site.daily_pattern={4:150};assert.equal(todayHome(d,date).target,150);assert.equal(todayHome(d,date).source,'曜日別の目安');
+d.goals.site.daily_targets={[date]:180};assert.equal(todayHome(d,date).target,180);assert.equal(todayHome(d,date).source,'今日の目標');
+d.goals.site.daily_targets[date]=null;assert.equal(todayHome(d,date).target,150);d.goals.site.daily_pattern[4]=0;assert.equal(todayHome(d,date).target,0);assert.equal(todayHome(d,date).achieved,true);
+const no=A.emptyData();assert.equal(todayHome(no,date).target,null);assert.equal(todayHome(no,date).average,null);
+const history=A.emptyData();history.study_records=[{date:'2026-10-01',duration_minutes:70},{date,duration_minutes:900}];assert.equal(todayHome(history,date).average,10,'today never contaminates comparison average');assert.equal(todayHome(history,date).count,7);
+history.study_records[0].date='2026-10-06';assert.equal(todayHome(history,date).count,2,'coverage before first record excluded');assert.equal(todayHome(history,date).average,35);
+for(const bad of [{'2026-02-30':30},{[date]:0},{[date]:1441},{[date]:1.5},{[date]:'30'},[]]){assert.equal(A.validDailyTargets(bad),false);assert.throws(()=>A.mergeImport(no,{study_records:[],goals:{site:{daily_targets:bad}}}));}
+assert.equal(A.validDailyTargets({[date]:30,'2026-10-09':null}),true);
+const imported=A.mergeImport(d,{study_records:[],goals:{site:{daily_targets:{[date]:90,'2026-10-09':120}}}});assert.equal(imported.data.goals.site.daily_targets[date],null,'existing target preserved on conflict');assert.equal(imported.data.goals.site.daily_targets['2026-10-09'],120);assert(imported.warnings.some(s=>s.includes('日別目標')));
+const base=A.emptyData(),left=structuredClone(base),right=structuredClone(base);left.goals.site.daily_targets={[date]:120};right.goals.site.daily_targets={'2026-10-09':180};const merged=mergeSync(base,left,right);assert.equal(merged.conflicts.length,0);assert.deepEqual({...merged.data.goals.site.daily_targets},{[date]:120,'2026-10-09':180});
+right.goals.site.daily_targets={[date]:180};assert(mergeSync(base,left,right).conflicts.some(c=>c.path.endsWith(date)),'same-day edits retain conflict protection');right.goals.site.daily_targets={[date]:0};assert.equal(validateSyncData(right),false);
+assert.equal(A.week(d,date).remaining,4);assert.equal(A.total(A.records(d,date,date)),110);
+console.log('PASS today home: stable weekly fallback, direct/weekday priority, zero/missing targets, baseline coverage, unknown subjects, suggestions, lossless import and per-date sync conflicts');

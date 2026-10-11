@@ -63,6 +63,10 @@ try {
  const d = A.emptyData();d.subjects = [{id: 'math', name: '数学', color: '#b33c88'}];d.materials = [{id: 'gold', name: 'Focus Gold', subject_id: 'math'}];d.study_records = [{id: 'seed', source: 'studyplus', source_id: 'seed', date: A.today(), subject_id: 'math', material_id: 'gold', duration_minutes: 30}];
  await phone.locator('input[type=file]').setInputFiles({name: 'test.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(d))});await phone.getByRole('button', {name: 'この内容で追加する', exact: true}).click();await phone.getByRole('dialog').waitFor({state: 'hidden'});
  await pair(phone);await pair(pc);await indicator(phone).locator(':scope[data-phase=synced]').waitFor();await indicator(pc).locator(':scope[data-phase=synced]').waitFor();assert.equal((await stored(pc)).data.subjects[0].color, '#b33c88');
+ // Daily goals use the same revision-safe transport as records/settings.
+ await phone.goto(base+'#dashboard');await phone.getByRole('button',{name:'目標を設定',exact:true}).click();await phone.getByLabel('今日の目標の時間').fill('2');await phone.getByLabel('今日の目標の分').fill('30');await phone.getByRole('button',{name:'今日の目標を保存',exact:true}).click();await phone.getByRole('dialog').waitFor({state:'hidden'});
+ const targetDate=A.today('Asia/Tokyo');await wait(async()=>(await remote()).data.goals.site.daily_targets?.[targetDate]===150);
+ await open(pc);await pc.getByRole('button',{name:'今すぐ同期',exact:true}).click();await wait(async()=>(await stored(pc)).data.goals.site.daily_targets?.[targetDate]===150);await pc.keyboard.press('Escape');await phone.goto(base+'#materials');await phone.locator('.context').waitFor({state:'attached'});
  if(githubMode){
   // Exercise the phone dot using actual mocked transport states, not DOM mutation.
   await open(phone);delayedContexts.add(contexts[0]);await phone.getByRole('button',{name:'今すぐ同期',exact:true}).click();
