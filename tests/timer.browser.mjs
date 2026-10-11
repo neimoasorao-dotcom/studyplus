@@ -22,11 +22,33 @@ async function advance(p,ms){await p.evaluate(ms=>localStorage.setItem('timer-te
 async function open(p){await p.getByRole('button',{name:'この教材で記録する',exact:true}).click();await p.getByRole('group',{name:'記録方法'}).waitFor();}
 async function close(p){await p.getByRole('button',{name:'画面を閉じる（計測・下書きを保持）',exact:true}).click();}
 async function discard(p){await p.getByRole('button',{name:'この計測を破棄',exact:true}).click();await p.getByRole('button',{name:'計測を破棄する',exact:true}).click();await wait(async()=>!(await timer(p)).timer);await p.keyboard.press('Escape');}
+async function checkRecorderLayout(p) {
+ for (const width of [360,390,430,1280,1440]) {
+  await p.setViewportSize({width,height:900});
+  await p.getByRole('dialog').evaluate(el=>{el.scrollTop=0;});
+  const layout=await p.getByRole('dialog').evaluate(dialog=>{
+   const rect=el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom};};
+   return {dialog:rect(dialog),header:rect(dialog.querySelector('[data-slot=dialog-header]')),group:rect(dialog.querySelector('.recorder-methods')),close:rect(dialog.querySelector('[data-slot=dialog-close]')),buttons:[...dialog.querySelectorAll('.recorder-methods button')].map(el=>{const range=document.createRange();range.selectNodeContents(el);return {...rect(el),text:rect(range),font:parseFloat(getComputedStyle(el).fontSize)};})};
+  });
+  assert(layout.dialog.x>=-1&&layout.dialog.right<=width+1,`${width}: dialog fits`);
+  assert(layout.group.y>=layout.header.bottom+4,`${width}: method selector is below heading`);
+  assert(layout.close.bottom<=layout.group.y,`${width}: close does not overlap selector`);
+  for(const button of layout.buttons){
+   assert.equal(button.y,layout.buttons[0].y,`${width}: methods are in one row`);
+   assert(button.height>=44,`${width}: tap target`);
+   assert(button.text.x>=button.x&&button.text.right<=button.right,`${width}: label fits`);
+   assert(button.text.height<button.font*2,`${width}: no multiline label`);
+  }
+  assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width}: page fits`);
+ }
+ await p.setViewportSize({width:390,height:900});
+}
+async function remainingArc(p,phase){return p.locator(`.pomodoro-segment.${phase} .pomodoro-remaining`).evaluate(path=>path.getTotalLength());}
 try{
  const p=await context.newPage();await p.goto(base+'#materials');await p.locator('.context').waitFor();
  const d=A.emptyData();d.subjects=[{id:'math',name:'数学',ideal_ratio:1,color:'#b33c88'}];d.materials=[{id:'book',name:'数学の非常に長い教材名'.repeat(4),subject_id:'math'}];
  await p.locator('input[type=file]').setInputFiles({name:'timer-fixture.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(d))});await p.getByRole('button',{name:'この内容で追加する',exact:true}).click();await p.getByRole('dialog').waitFor({state:'hidden'});
- await open(p);await p.getByRole('button',{name:'ストップウォッチ',exact:true}).click();assert.equal(await p.getByLabel('計測する教材').inputValue(),'book');assert.equal(await p.getByLabel('計測する科目').inputValue(),'math');
+ await open(p);await checkRecorderLayout(p);await p.getByRole('button',{name:'ストップウォッチ',exact:true}).click();assert.equal(await p.getByLabel('計測する教材').inputValue(),'book');assert.equal(await p.getByLabel('計測する科目').inputValue(),'math');
  // Denied draft writes must never start an unpersisted timer.
  await p.evaluate(()=>{window.failTimerWrite=true;});await p.getByRole('button',{name:'計測を開始',exact:true}).click();await p.locator('.timer-panel [role=alert]').waitFor();assert.equal((await timer(p)),undefined);
  await p.evaluate(()=>{window.failTimerWrite=false;});await p.getByRole('button',{name:'最新の計測を再読込',exact:true}).click();await p.getByRole('button',{name:'計測を開始',exact:true}).click();await wait(async()=>(await timer(p))?.timer?.status==='running');
@@ -38,18 +60,27 @@ try{
  // create a second record with the same fixed session ID.
  await p.evaluate(()=>{window.failTimerClear=true;});await p.locator('.manual-form').getByRole('button',{name:'保存',exact:true}).click();await p.locator('.manual-form [role=alert]').waitFor();assert.equal((await state(p)).data.study_records.length,1);
  await p.evaluate(()=>{window.failTimerClear=false;});await p.reload();await p.locator('.timer-banner').click();await p.locator('.manual-form').getByRole('button',{name:'保存',exact:true}).click();await p.getByRole('dialog').waitFor({state:'hidden'});assert.equal((await state(p)).data.study_records.length,1);assert.equal((await state(p)).data.study_records[0].source_id,id);assert.equal((await timer(p)).timer,null);
- await open(p);await p.getByRole('button',{name:'ポモドロ',exact:true}).click();
+ await open(p);await p.getByRole('button',{name:'ポモドーロ',exact:true}).click();await checkRecorderLayout(p);
  await p.getByLabel('学習（分）',{exact:true}).fill('1');await p.getByLabel('短休憩（分）',{exact:true}).fill('1');await p.getByLabel('長休憩（分）',{exact:true}).fill('2');await p.getByLabel('長休憩までのセット数',{exact:true}).fill('2');await p.getByRole('button',{name:'計測を開始',exact:true}).click();await wait(async()=>(await timer(p)).timer.status==='running');
- await advance(p,10*60000);await wait(async()=>(await timer(p)).timer.status==='waiting');let t=(await timer(p)).timer;assert.equal(t.completedSets,1);assert.equal(t.studyMs,60000);assert.equal(t.phase,'shortBreak');
- await p.getByRole('button',{name:'短休憩を開始',exact:true}).click();await advance(p,10*60000);await wait(async()=>(await timer(p)).timer.status==='waiting');assert.equal((await timer(p)).timer.studyMs,60000);assert.equal((await timer(p)).timer.phase,'focus');
- await p.getByRole('button',{name:'学習を開始',exact:true}).click();await advance(p,60000);await wait(async()=>(await timer(p)).timer.status==='waiting');assert.equal((await timer(p)).timer.phase,'longBreak');assert.equal((await timer(p)).timer.completedSets,2);assert.equal((await timer(p)).timer.studyMs,120000);
+ await p.getByRole('group',{name:'ポモドーロの進行状況',exact:true}).waitFor();
+ await checkRecorderLayout(p);
+ const colors=await p.locator('.pomodoro-remaining').evaluateAll(paths=>paths.map(path=>getComputedStyle(path).stroke));assert.equal(colors.length,2);assert.notEqual(colors[0],colors[1]);
+ assert.equal(await p.locator('.pomodoro-current').textContent(),'学習');assert.match(await p.locator('.pomodoro-legend [aria-current=step]').textContent(),/学習 1分現在/);
+ const fullFocus=await remainingArc(p,'focus');await advance(p,30000);assert(Math.abs(await remainingArc(p,'focus')/fullFocus-.5)<.01,'focus arc follows remaining time');
+ await p.getByRole('button',{name:'一時停止',exact:true}).click();await wait(async()=>(await timer(p)).timer.status==='paused');const pausedArc=await remainingArc(p,'focus');await advance(p,120000);assert.equal(await remainingArc(p,'focus'),pausedArc,'paused arc stays fixed');
+ await close(p);await p.reload();await p.locator('.timer-banner').click();assert.equal(await remainingArc(p,'focus'),pausedArc,'restored arc stays fixed');
+ await p.getByRole('button',{name:'計測を再開',exact:true}).click();
+ await advance(p,10*60000);await wait(async()=>(await timer(p)).timer.status==='waiting');assert.equal(await p.locator('.pomodoro-current').textContent(),'短休憩');assert.equal(await p.locator('.pomodoro-segment.focus .pomodoro-remaining').count(),0);let t=(await timer(p)).timer;assert.equal(t.completedSets,1);assert.equal(t.studyMs,60000);assert.equal(t.phase,'shortBreak');
+ await p.getByRole('button',{name:'短休憩を開始',exact:true}).click();const fullRest=await remainingArc(p,'break');await advance(p,30000);assert(Math.abs(await remainingArc(p,'break')/fullRest-.5)<.01,'rest arc follows remaining time');await advance(p,10*60000);await wait(async()=>(await timer(p)).timer.status==='waiting');assert.equal((await timer(p)).timer.studyMs,60000);assert.equal((await timer(p)).timer.phase,'focus');
+ await p.getByRole('button',{name:'学習を開始',exact:true}).click();await advance(p,60000);await wait(async()=>(await timer(p)).timer.status==='waiting');assert.equal((await timer(p)).timer.phase,'longBreak');assert.equal((await timer(p)).timer.completedSets,2);assert.equal(await p.locator('.pomodoro-current').textContent(),'長休憩');assert.match(await p.locator('.pomodoro-legend [aria-current=step]').textContent(),/長休憩 2分現在/);assert.equal(await p.getByLabel('区間の残り時間',{exact:true}).textContent(),'02:00');assert.equal((await timer(p)).timer.studyMs,120000);
  await close(p);const other=await context.newPage();await other.goto(base+'#materials');await other.locator('.timer-banner').waitFor();await other.locator('.timer-banner').click();await other.getByRole('button',{name:'長休憩を開始',exact:true}).click();await wait(async()=>(await timer(p)).timer.status==='running');await p.locator('.timer-banner').click();await p.getByRole('button',{name:'一時停止',exact:true}).click();await wait(async()=>(await timer(p)).timer.status==='paused');await close(p);await other.reload();await other.locator('.timer-banner').click();await other.getByRole('button',{name:'計測を再開',exact:true}).waitFor();await other.close();
  await p.locator('.timer-banner').click();await p.getByRole('button',{name:'終了して保存へ',exact:true}).click();await p.locator('.manual-form').waitFor();assert.equal(await p.getByLabel('学習時間の分',{exact:true}).inputValue(),'2');
+ await checkRecorderLayout(p);assert.equal(await p.locator('.pomodoro-indicator').count(),0);
  for(const width of [360,390,430,1280,1440]){await p.setViewportSize({width,height:900});assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));const box=await p.getByRole('dialog').boundingBox();assert(box.x>=-1&&box.x+box.width<=width+1,`${width}:dialog bounds`);await p.locator('.manual-form').getByRole('button',{name:'保存',exact:true}).scrollIntoViewIfNeeded();assert(await p.locator('.manual-form').getByRole('button',{name:'保存',exact:true}).isVisible());}
  await mkdir('/workspace/studyplus-artifacts/timers',{recursive:true});await p.setViewportSize({width:390,height:900});await p.screenshot({path:'/workspace/studyplus-artifacts/timers/review-390.png'});
  // Distinct sessions with identical minutes require explicit duplicate confirmation.
  await p.locator('.manual-form').getByRole('button',{name:'保存',exact:true}).click();await p.getByLabel('別の記録として追加する').check();await p.locator('.manual-form').getByRole('button',{name:'保存',exact:true}).click();await p.getByRole('dialog').waitFor({state:'hidden'});assert.equal((await state(p)).data.study_records.length,2);assert.equal((await state(p)).data.study_records[1].timer.completed_sets,2);
  await open(p);await p.getByRole('button',{name:'ストップウォッチ',exact:true}).click();await p.getByRole('button',{name:'計測を開始',exact:true}).click();await wait(async()=>(await timer(p)).timer);await discard(p);assert.equal((await state(p)).data.study_records.length,2);
  assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);
- console.log('PASS timers '+(file?'standalone HTML':'Pages')+': material/subject inheritance, denied storage, pause/resume/reload, fixed-ID cleanup recovery, Pomodoro focus/rest/long break, cross-tab state, five widths, confirmation/save/discard; no external requests');
+ console.log('PASS timers '+(file?'standalone HTML':'Pages')+': material/subject inheritance, denied storage, pause/resume/reload, fixed-ID cleanup recovery, Pomodoro colored focus/rest arcs, countdown/pause/restore, short/long break, cross-tab state, selector layout at five widths, confirmation/save/discard; no external requests');
 }finally{await browser.close();if(server)await new Promise(resolve=>server.close(resolve));}

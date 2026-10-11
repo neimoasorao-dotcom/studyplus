@@ -7,11 +7,12 @@ import {today,type Data} from '../lib/analysis';
 import {initialRecord, type buildManualRecord} from '../lib/manual-record';
 import {clockText,createTimer,defaultTimerConfig,finishTimer,pauseTimer,resumeTimer,settleTimer,timerElapsed,timerMinutes,timerReview,type StudyTimer,type TimerConfig} from '../lib/study-timer';
 import {timerStore,type TimerState} from '../lib/timer-store';
+import {PomodoroIndicator} from './pomodoro-indicator';
 
 type TimerRecord=ReturnType<typeof buildManualRecord> & {timer?:{mode:StudyTimer['mode'];elapsed_seconds:number;completed_sets:number;config?:TimerConfig}};
 type Props={data:Data;date:string;materialId:string|null;saving:boolean;blocked:boolean;onOpen:(material:string|null)=>void;onSave:(record:TimerRecord)=>Promise<boolean>;onSettings:()=>void};
 const phases={focus:'学習',shortBreak:'短休憩',longBreak:'長休憩'};
-const methodNames={manual:'手入力',stopwatch:'ストップウォッチ',pomodoro:'ポモドロ'};
+const methodNames={manual:'手入力',stopwatch:'ストップウォッチ',pomodoro:'ポモドーロ'};
 export function StudyRecorder({data,materialId,saving,blocked,onOpen,onSave,onSettings}:Props){
  const [stored,setStored]=useState<TimerState|null>(null),[method,setMethod]=useState<'manual'|'stopwatch'|'pomodoro'>('manual'),[now,setNow]=useState(0),[config,setConfig]=useState<TimerConfig>({...defaultTimerConfig}),[subject,setSubject]=useState(''),[material,setMaterial]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[discard,setDiscard]=useState(false),[restored,setRestored]=useState(false),[sound,setSound]=useState(false);
  const state=useRef<TimerState|null>(null),operating=useRef(false),audio=useRef<AudioContext|null>(null),mounted=useRef(true);
@@ -80,7 +81,7 @@ export function StudyRecorder({data,materialId,saving,blocked,onOpen,onSave,onSe
  {timer&&<button className="timer-banner" onClick={()=>onOpen(timer.materialId)} aria-label={`学習タイマーを開く：${label}`}><span>{restored?'計測を復元 · ':''}{label}</span><strong>{clockText(elapsed!.studyMs)}</strong><span className="timer-banner-name">{data.materials.find(m=>m.id===timer.materialId)?.name||data.subjects.find(s=>s.id===timer.subjectId)?.name||'科目を確認'}</span><span>開く</span></button>}
  {error&&materialId===null&&<div className="notice error" role="alert">{error}<button onClick={()=>{void reload();}}>タイマーを再読込</button></div>}
  <Dialog open={materialId!==null} onOpenChange={open=>{if(!open&&!disabled)onOpen(null);}}><DialogContent placement="responsive-sheet" className="manual-dialog recorder-dialog" style={viewport} showCloseButton={!disabled} onEscapeKeyDown={e=>{if(disabled)e.preventDefault();}} onPointerDownOutside={e=>e.preventDefault()}>
- <div className="manual-handle"/><DialogHeader><DialogTitle>{timer&&method!=='manual'&&timer.status==='review'?'計測結果を保存':'学習記録を追加'}</DialogTitle><DialogDescription className="sr-only">手入力、ストップウォッチ、ポモドロから記録方法を選択します。</DialogDescription></DialogHeader>
+ <div className="manual-handle"/><DialogHeader><DialogTitle>{timer&&method!=='manual'&&timer.status==='review'?'計測結果を保存':'学習記録を追加'}</DialogTitle><DialogDescription className="sr-only">手入力、ストップウォッチ、ポモドーロから記録方法を選択します。</DialogDescription></DialogHeader>
  <div className="recorder-methods" role="group" aria-label="記録方法">{(['manual','stopwatch','pomodoro'] as const).map(m=><button key={m} aria-pressed={method===m} disabled={disabled||(m!=='manual'&&!!timer&&timer.mode!==m)} onClick={()=>{setMethod(m);setDiscard(false);}}>{methodNames[m]}</button>)}</div>
  {method==='manual'?materialId!==null&&<ManualRecordForm key={materialId} data={data} date={date} materialId={materialId} saving={saving} onSave={onSave} onClose={()=>onOpen(null)} onSettings={onSettings}/>:<div className="timer-panel">
  {error&&<div className="notice error" role="alert">{error}<button disabled={disabled} onClick={()=>{void reload();}}>最新の計測を再読込</button></div>}
@@ -95,7 +96,7 @@ export function StudyRecorder({data,materialId,saving,blocked,onOpen,onSave,onSe
  {restored&&<p className="notice">中断前の計測を復元しました。経過時間を確認し、続けるか、終了して保存してください。</p>}
  <p className="timer-target">{data.subjects.find(s=>s.id===timer.subjectId)?.name||'科目を選び直してください'} · {data.materials.find(m=>m.id===timer.materialId)?.name||'教材なし'}</p>
  <p className="timer-phase" role="status">{label}{timer.mode==='pomodoro'&&` · 完了 ${timer.completedSets}セット`}</p>
- <output className="timer-clock" aria-live="off" aria-label={timer.mode==='pomodoro'&&timer.status!=='review'?'区間の残り時間':'計測した学習時間'}>{clockText(timer.mode==='pomodoro'&&timer.status!=='review'?elapsed!.remainingMs:elapsed!.studyMs)}</output>
+ {timer.mode==='pomodoro'&&timer.status!=='review'?<PomodoroIndicator timer={timer} remainingMs={elapsed!.remainingMs}/>:<output className="timer-clock" aria-live="off" aria-label="計測した学習時間">{clockText(elapsed!.studyMs)}</output>}
  {timer.mode==='pomodoro'&&<p>累計学習時間 {clockText(elapsed!.studyMs)}</p>}
  {timer.status==='review'?<>
  <p className="muted">計測 {clockText(timer.studyMs)} → 保存 {timerMinutes(timer.studyMs)}分。科目・教材・日付・時間を修正できます。日付は開始日です。</p>
@@ -108,7 +109,7 @@ export function StudyRecorder({data,materialId,saving,blocked,onOpen,onSave,onSe
  <button disabled={disabled} onClick={()=>onOpen(null)}>画面を閉じる（計測・下書きを保持）</button>
  </>}
  {method==='pomodoro'&&<label className="timer-sound"><input type="checkbox" checked={sound} onChange={e=>{setSound(e.target.checked);if(e.target.checked){try{audio.current??=new AudioContext();void audio.current.resume();}catch{setSound(false);setError('このブラウザでは終了音を利用できません。');}}}}/>区間終了時に音を鳴らす</label>}
- <p className="muted">画面ロック中の音は保証されません。画面に戻ると時刻から復元し、ポモドロは現在の区間で止まります。学習時間は最大24時間です。</p>
+ <p className="muted">画面ロック中の音は保証されません。画面に戻ると時刻から復元し、ポモドーロは現在の区間で止まります。学習時間は最大24時間です。</p>
  </div>}
  </DialogContent></Dialog>
  </>;
