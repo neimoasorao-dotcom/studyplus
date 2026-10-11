@@ -56,6 +56,16 @@ async function checkClosedTimerPlacement(p) {
    assert(banner.y+banner.height<=settings.y&&settings.y-banner.y-banner.height<=12,'timer is immediately above Settings');
    await p.evaluate(()=>scrollTo(0,500));const scrolled=await p.locator(selector).boundingBox();assert.equal(scrolled.y,banner.y,'sidebar timer stays visible when content scrolls');
   }
+  if(width<=767){
+   const settings=await p.getByRole('button',{name:'データ・設定メニュー'}).boundingBox();
+   assert(banner.y>=settings.y-1&&banner.y+banner.height<=settings.y+settings.height+1,'timer is in header row');
+   assert(banner.x+banner.width<=settings.x,'timer is left of header actions');
+   assert.match(await p.locator('.timer-banner-time').textContent(),/^\d+:\d{2}(?::\d{2})?$/,'only time is displayed');
+   await p.emulateMedia({reducedMotion:'no-preference'});
+   assert.equal(await p.locator('.timer-banner-time').evaluate(el=>getComputedStyle(el).animationName),saved.status==='paused'?'indicator-blink':'none');
+   await p.emulateMedia({reducedMotion:'reduce'});
+   assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'phone header fits');
+  }
   assert.equal((await timer(p)).timer.id,saved.id,'resizing never restarts the timer');
  }
  await p.setViewportSize({width:1280,height:600});await p.locator('.sidebar-timer-slot .timer-banner').waitFor();
@@ -68,7 +78,7 @@ async function checkClosedTimerPlacement(p) {
 }
 async function remainingArc(p,phase){return p.locator(`.pomodoro-segment.${phase} .pomodoro-remaining`).evaluate(path=>path.getTotalLength());}
 try{
- const p=await context.newPage();await p.goto(base+'#materials');await p.locator('.context').waitFor();
+ const p=await context.newPage();await p.goto(base+'#materials');await p.locator('.context').waitFor({state:'attached'});
  const d=A.emptyData();d.subjects=[{id:'math',name:'数学',ideal_ratio:1,color:'#b33c88'}];d.materials=[{id:'book',name:'数学の非常に長い教材名'.repeat(4),subject_id:'math'}];
  await p.locator('input[type=file]').setInputFiles({name:'timer-fixture.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(d))});await p.getByRole('button',{name:'この内容で追加する',exact:true}).click();await p.getByRole('dialog').waitFor({state:'hidden'});
  await open(p);await checkRecorderLayout(p);await p.getByRole('button',{name:'ストップウォッチ',exact:true}).click();assert.equal(await p.getByLabel('計測する教材').inputValue(),'book');assert.equal(await p.getByLabel('計測する科目').inputValue(),'math');

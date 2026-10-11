@@ -1,4 +1,5 @@
 'use client';
+import type {ReactNode} from 'react';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription} from './ui/dialog';
 import {connect, connectGitHub, disconnect, getConnection, synchronize} from '../github-pages/device-sync';
@@ -6,7 +7,7 @@ import type {SyncResult} from '../github-pages/device-sync';
 
 export type SyncStatus = {phase: 'disconnected' | 'waiting' | 'syncing' | 'synced' | 'offline' | 'conflict' | 'error'; syncedAt?: string};
 
-export function DeviceSync({open, onOpenChange, paused, revision, onApplied, onStatusChange}: {open: boolean; onOpenChange: (v: boolean) => void; paused: boolean; revision: number; onApplied: () => Promise<void>; onStatusChange: (status: SyncStatus) => void}) {
+export function DeviceSync({open, onOpenChange, paused, revision, onApplied, onStatusChange, children}: {children?: ReactNode; open: boolean; onOpenChange: (v: boolean) => void; paused: boolean; revision: number; onApplied: () => Promise<void>; onStatusChange: (status: SyncStatus) => void}) {
   const [provider, setProvider] = useState<'github' | 'cloudflare'>('github'), [repository, setRepository] = useState('neimoasorao-dotcom/studyplus-data'), [branch, setBranch] = useState('main');
   const [url, setUrl] = useState(''), [key, setKey] = useState(''), [connected, setConnected] = useState(false), [busy, setBusy] = useState(false), [message, setMessage] = useState('未接続：記録はこのブラウザ内に保存されています。'), [result, setResult] = useState<SyncResult | null>(null);
   const [phase, setPhase] = useState<SyncStatus['phase']>('disconnected'), [syncedAt, setSyncedAt] = useState<string>(), [online, setOnline] = useState(true);
@@ -61,8 +62,10 @@ export function DeviceSync({open, onOpenChange, paused, revision, onApplied, onS
     const href = URL.createObjectURL(new Blob([JSON.stringify(result.remote, null, 2)], {type: 'application/json'}));
     const a = document.createElement('a'); a.href = href; a.download = 'studyplus_shared_backup.json'; a.click(); setTimeout(() => URL.revokeObjectURL(href), 1000);
   }
-  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="sync-dialog">
-    <DialogHeader><DialogTitle>端末間の同期</DialogTitle><DialogDescription>iPhone・PCで同じ保存先を設定します。トークン・共有キーはJSON出力には含まれません。</DialogDescription></DialogHeader>
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="sync-dialog utility-dialog">
+    <DialogHeader><DialogTitle>{children?'データ・設定':'端末間の同期'}</DialogTitle><DialogDescription>{children?'記録の読込・バックアップ、設定と端末間の同期':'iPhone・PCで同じ保存先を設定します。'}</DialogDescription></DialogHeader>
+    {children}
+    <section className="sync-settings" aria-label="端末間の同期"><h2>端末間の同期</h2><p className="muted">トークン・共有キーはJSON出力には含まれません。</p>
     <p role="status" aria-live="polite">{message}</p>
     <p className="muted">起動時・変更後・接続復帰時と30秒ごとに同期します。通信できない間も端末内に保存されます。最初の同期ではこの端末のデータも共有保存先へ送信します。</p>
     <label className="field"><span>同期方式</span><select value={provider} disabled={busy || connected} onChange={e => {setProvider(e.target.value as 'github' | 'cloudflare');setKey('');}}><option value="github">GitHub非公開リポジトリ（Node不要）</option><option value="cloudflare">Cloudflare API</option></select></label>
@@ -74,5 +77,6 @@ export function DeviceSync({open, onOpenChange, paused, revision, onApplied, onS
     {!connected && <><label className="field"><span>{provider === 'github' ? 'GitHubトークン' : '共有キー'}</span><input type="password" value={key} onChange={e => setKey(e.target.value)} autoComplete="off" disabled={busy} autoCapitalize="none" autoCorrect="off"/></label>{provider === 'github' && <p className="muted"><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">Fine-grained tokenを作成</a>：保存先リポジトリだけを選択し、ContentsをRead and writeにします。トークンは各端末に保存し、チャットには貼らないでください。</p>}</>}
     <div className="sync-actions">{connected ? <><button disabled={busy || paused} onClick={() => void sync()}>今すぐ同期</button><button disabled={busy} onClick={async () => {try {await disconnect(); setConnected(false); setPhase('disconnected'); setSyncedAt(undefined); setKey(''); setResult(null); setMessage('同期を解除しました。端末内と共有保存先の記録は削除していません。');} catch (e) {setMessage((e as Error).message);}}}>この端末の同期を解除</button></> : <button disabled={busy || paused || !key || (provider === 'github' ? !repository || !branch : !url)} onClick={async () => {setBusy(true); try {if(provider === 'github')await connectGitHub(repository.trim(), branch.trim(), key.trim());else await connect(url.trim(), key.trim()); setKey(''); setConnected(true); setPhase('waiting'); setSyncedAt(undefined); setMessage('接続済み：同期待ち');} catch (e) {setMessage((e as Error).message);} finally {setBusy(false);}}}>接続して同期を開始</button>}</div>
     {result?.conflicts.length ? <section><h3>競合した項目</h3><p>この端末のJSONは「データ・設定」から出力できます。両方をバックアップし、記録や設定を確認してから再度同期してください。削除と変更が競合した場合も自動では処理しません。</p><button onClick={backupRemote}>共有保存先のJSONを出力</button>{result.conflicts.map(c => <details key={c.path}><summary>{c.path || 'データ全体'}</summary><pre>{JSON.stringify({この端末: c.local, 共有保存先: c.remote}, null, 2)}</pre></details>)}</section> : null}
+    </section>
   </DialogContent></Dialog>;
 }
