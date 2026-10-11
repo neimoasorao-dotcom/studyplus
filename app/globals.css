@@ -184,3 +184,18 @@ table{font-size:.8125rem;font-variant-numeric:tabular-nums}th{background:#f5f8fc
 .pomodoro-legend i{width:8px;height:8px;border-radius:50%;background:var(--pomodoro-focus)}
 .pomodoro-legend .break i{background:var(--pomodoro-break)}
 .pomodoro-legend small{font-size:.625rem;border:1px solid var(--border);border-radius:3px;padding:0 3px;color:var(--foreground)}
+
+/* Required phone review fixes; existing desktop and tablet rules are unchanged. */
+@media(max-width:767px){
+ .timer-banner{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;display:grid;grid-template-columns:auto auto minmax(0,1fr) 44px;align-items:center;gap:4px;height:44px;min-height:44px;padding:0 6px;flex-wrap:nowrap}
+ .timer-banner-state{white-space:nowrap;font-size:.6875rem}
+ .timer-banner .timer-banner-time{white-space:nowrap;font-size:.8125rem;line-height:1.2}
+ .timer-banner-subject{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.6875rem}
+ .timer-banner-open{display:grid;place-items:center;width:44px;height:44px;font-size:.75rem;color:var(--primary);font-weight:600}
+ .main:has(>.timer-banner) .analysis-tabs{top:calc(44px + env(safe-area-inset-top,0px))}
+ .main:has(>.timer-banner) .mobile-analysis{scroll-margin-top:calc(44px + env(safe-area-inset-top,0px))}
+ .more-dialog{row-gap:12px}
+ .more-dialog [data-slot=dialog-header]{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:12px}
+ .more-dialog [data-slot=dialog-title]{min-width:0;overflow-wrap:anywhere}
+ .more-dialog .more-close{flex:none;width:44px;height:44px;min-height:44px;padding:0}
+}
