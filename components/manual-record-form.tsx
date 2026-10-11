@@ -4,13 +4,13 @@ import {ChevronDown} from 'lucide-react';
 import {type Data} from '@/lib/analysis';
 import {initialRecord,buildManualRecord,manualDuplicateCount,nextRecord,type RecordInput} from '@/lib/manual-record';
 
-type Props={data:Data;date:string;materialId?:string;saving:boolean;onSave:(record:ReturnType<typeof buildManualRecord>)=>Promise<boolean>;onClose:()=>void;onSettings:()=>void};
-export function ManualRecordForm({data,date,materialId='',saving,onSave,onClose,onSettings}:Props){
- const [input,setInput]=useState(()=>initialRecord(date,data,materialId)),[details,setDetails]=useState(false),[error,setError]=useState(''),[duplicates,setDuplicates]=useState(0),[confirmed,setConfirmed]=useState(false),[notice,setNotice]=useState('');
+type Props={data:Data;date:string;materialId?:string;saving:boolean;onSave:(record:ReturnType<typeof buildManualRecord>)=>Promise<boolean>;onClose:()=>void;onSettings:()=>void;initialInput?:RecordInput;recordId?:string;singleSave?:boolean};
+export function ManualRecordForm({data,date,materialId='',saving,onSave,onClose,onSettings,initialInput,recordId,singleSave=false}:Props){
+ const [input,setInput]=useState(()=>initialInput??initialRecord(date,data,materialId)),[details,setDetails]=useState(false),[error,setError]=useState(''),[duplicates,setDuplicates]=useState(0),[confirmed,setConfirmed]=useState(false),[notice,setNotice]=useState('');
  const busy=useRef(false),minutesField=useRef<HTMLInputElement>(null);
  const update=(key:keyof RecordInput,value:string)=>{setInput(old=>({...old,[key]:value}));setError('');setDuplicates(0);setConfirmed(false);setNotice('');};
  function chooseMaterial(value:string){const material=data.materials.find(m=>m.id===value);const subject=data.subjects.some(s=>s.id===material?.subject_id)?material.subject_id:'';setInput(old=>({...old,material_id:value,subject_id:value?subject:old.subject_id}));setError('');setDuplicates(0);setConfirmed(false);setNotice('');}
- async function submit(keepOpen:boolean){if(saving||busy.current)return;setError('');setNotice('');let record;try{record=buildManualRecord(input,data,date,crypto.randomUUID());const count=manualDuplicateCount(data,record);if(count&&!confirmed){setDuplicates(count);return;}}catch(e:any){setError(e.message);return;}
+ async function submit(keepOpen:boolean){if(saving||busy.current)return;setError('');setNotice('');let record;try{record=buildManualRecord(input,data,date,recordId??crypto.randomUUID());const count=manualDuplicateCount(data,record);if(count&&!confirmed&&!data.study_records.some(r=>recordId&&r.id===recordId)){setDuplicates(count);return;}}catch(e:any){setError(e.message);return;}
   busy.current=true;try{if(await onSave(record)){if(keepOpen){setInput(nextRecord(input));setDuplicates(0);setConfirmed(false);setNotice('記録を追加しました');minutesField.current?.focus();}else onClose();}else setError('保存できませんでした。入力内容は残っています。画面のエラーを確認してください。');}finally{busy.current=false;}
  }
  const material=data.materials.find(m=>m.id===input.material_id),autoSubject=material&&material.subject_id===input.subject_id&&data.subjects.some(s=>s.id===input.subject_id);
@@ -26,6 +26,6 @@ export function ManualRecordForm({data,date,materialId='',saving,onSave,onClose,
  {details&&<div id="manual-record-details" className="manual-extra"><div className="manual-two"><label className="field"><span>開始時刻（任意）</span><input type="time" value={input.start_time} onChange={e=>update('start_time',e.target.value)}/></label><label className="field"><span>終了時刻（任意）</span><input type="time" value={input.end_time} onChange={e=>update('end_time',e.target.value)}/></label></div><label className="field"><span>メモ（任意）</span><textarea value={input.comment} onChange={e=>update('comment',e.target.value)}/></label></div>}
  {duplicates>0&&<div className="manual-duplicate" role="status"><p>同じ日付・教材・科目・学習時間の記録が{duplicates}件あります。</p><label><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/>別の記録として追加する</label></div>}
  {error&&<p className="notice error" role="alert">{error}</p>}{notice&&<p className="manual-success" aria-live="polite">{notice}</p>}
- <div className="manual-buttons"><button type="submit" disabled={saving||!data.subjects.length}>{saving?'保存中…':'保存'}</button><button type="button" className="primary" disabled={saving||!data.subjects.length} onClick={()=>submit(true)}>{saving?'保存中…':'保存して続ける'}</button><button type="button" className="mobile-only manual-close" disabled={saving} onClick={onClose}>閉じる（保存しない）</button></div>
+ <div className="manual-buttons"><button type="submit" disabled={saving||!data.subjects.length}>{saving?'保存中…':'保存'}</button>{!singleSave&&<button type="button" className="primary" disabled={saving||!data.subjects.length} onClick={()=>submit(true)}>{saving?'保存中…':'保存して続ける'}</button>}<button type="button" className="mobile-only manual-close" disabled={saving} onClick={onClose}>閉じる（保存しない）</button></div>
  </fieldset></form>;
 }
