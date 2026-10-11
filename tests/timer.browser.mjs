@@ -43,6 +43,29 @@ async function checkRecorderLayout(p) {
  }
  await p.setViewportSize({width:390,height:900});
 }
+async function checkClosedTimerPlacement(p) {
+ const saved=(await timer(p)).timer;
+ for(const width of [360,390,430,767,768,1280,1440]) {
+  await p.setViewportSize({width,height:900});
+  const selector=width>=768?'.sidebar-timer-slot .timer-banner':'main .timer-banner';
+  await p.locator(selector).waitFor();assert.equal(await p.locator('.timer-banner').count(),1,'one timer entry only');
+  const banner=await p.locator(selector).boundingBox();assert(banner.x>=0&&banner.x+banner.width<=width+1);
+  if(width>=768){
+   assert.equal(await p.locator('main .timer-banner').count(),0,'no desktop header duplicate');
+   const settings=await p.locator('[data-slot=sidebar-footer]').getByRole('button',{name:'設定',exact:true}).boundingBox();
+   assert(banner.y+banner.height<=settings.y&&settings.y-banner.y-banner.height<=12,'timer is immediately above Settings');
+   await p.evaluate(()=>scrollTo(0,500));const scrolled=await p.locator(selector).boundingBox();assert.equal(scrolled.y,banner.y,'sidebar timer stays visible when content scrolls');
+  }
+  assert.equal((await timer(p)).timer.id,saved.id,'resizing never restarts the timer');
+ }
+ await p.setViewportSize({width:1280,height:600});await p.locator('.sidebar-timer-slot .timer-banner').waitFor();
+ const small=await p.locator('.timer-banner').boundingBox();assert(small.y>=0&&small.y+small.height<=600,'short desktop screen fits');
+ await mkdir('/workspace/studyplus-artifacts/timers',{recursive:true});await p.screenshot({path:'/workspace/studyplus-artifacts/timers/sidebar-timer-1280.png'});
+ await p.locator('.timer-banner').focus();await p.keyboard.press('Enter');await p.getByRole('dialog').waitFor();
+ assert.equal(await p.locator('.timer-banner').count(),0,'entry hides while recorder is open');assert.equal((await timer(p)).timer.id,saved.id,'reopens existing timer');
+ assert.match(await p.locator('.timer-target').textContent(),/数学の非常に長い教材名/);
+ await close(p);await p.getByRole('dialog').waitFor({state:'hidden'});await p.setViewportSize({width:390,height:900});await p.locator('main .timer-banner').waitFor();
+}
 async function remainingArc(p,phase){return p.locator(`.pomodoro-segment.${phase} .pomodoro-remaining`).evaluate(path=>path.getTotalLength());}
 try{
  const p=await context.newPage();await p.goto(base+'#materials');await p.locator('.context').waitFor();
@@ -54,7 +77,7 @@ try{
  await p.evaluate(()=>{window.failTimerWrite=false;});await p.getByRole('button',{name:'最新の計測を再読込',exact:true}).click();await p.getByRole('button',{name:'計測を開始',exact:true}).click();await wait(async()=>(await timer(p))?.timer?.status==='running');
  await advance(p,65000);await p.getByRole('button',{name:'一時停止',exact:true}).click();await wait(async()=>(await timer(p)).timer.status==='paused');assert.equal((await timer(p)).timer.studyMs,65000);
  await advance(p,300000);assert.equal((await timer(p)).timer.studyMs,65000);
- await p.getByRole('button',{name:'計測を再開',exact:true}).click();await advance(p,30000);await close(p);await p.locator('.timer-banner').waitFor();await p.reload();await p.locator('.timer-banner').waitFor();await p.locator('.timer-banner').click();await p.getByRole('button',{name:'終了して保存へ',exact:true}).click();await p.locator('.manual-form').waitFor();assert.equal(await p.getByLabel('学習時間の分',{exact:true}).inputValue(),'2');
+ await p.getByRole('button',{name:'計測を再開',exact:true}).click();await advance(p,30000);await close(p);await p.locator('.timer-banner').waitFor();await checkClosedTimerPlacement(p);await p.reload();await p.locator('.timer-banner').waitFor();await p.locator('.timer-banner').click();await p.getByRole('button',{name:'終了して保存へ',exact:true}).click();await p.locator('.manual-form').waitFor();assert.equal(await p.getByLabel('学習時間の分',{exact:true}).inputValue(),'2');
  const id=(await timer(p)).timer.id;
  // If learning save succeeds but draft cleanup fails, refresh/retry must not
  // create a second record with the same fixed session ID.
@@ -82,5 +105,5 @@ try{
  await p.locator('.manual-form').getByRole('button',{name:'保存',exact:true}).click();await p.getByLabel('別の記録として追加する').check();await p.locator('.manual-form').getByRole('button',{name:'保存',exact:true}).click();await p.getByRole('dialog').waitFor({state:'hidden'});assert.equal((await state(p)).data.study_records.length,2);assert.equal((await state(p)).data.study_records[1].timer.completed_sets,2);
  await open(p);await p.getByRole('button',{name:'ストップウォッチ',exact:true}).click();await p.getByRole('button',{name:'計測を開始',exact:true}).click();await wait(async()=>(await timer(p)).timer);await discard(p);assert.equal((await state(p)).data.study_records.length,2);
  assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);
- console.log('PASS timers '+(file?'standalone HTML':'Pages')+': material/subject inheritance, denied storage, pause/resume/reload, fixed-ID cleanup recovery, Pomodoro colored focus/rest arcs, countdown/pause/restore, short/long break, cross-tab state, selector layout at five widths, confirmation/save/discard; no external requests');
+ console.log('PASS timers '+(file?'standalone HTML':'Pages')+': material/subject inheritance, denied storage, pause/resume/reload, fixed-ID cleanup recovery, Pomodoro colored focus/rest arcs, countdown/pause/restore, short/long break, cross-tab state, selector layout at five widths, desktop sidebar/mobile banner placement and keyboard reopen, confirmation/save/discard; no external requests');
 }finally{await browser.close();if(server)await new Promise(resolve=>server.close(resolve));}

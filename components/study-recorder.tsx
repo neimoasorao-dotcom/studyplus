@@ -1,5 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
+import {createPortal} from 'react-dom';
+import {useIsMobile} from '../hooks/use-mobile';
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from './ui/dialog';
 import {ManualRecordForm} from './manual-record-form';
 import {useInputViewport} from './mobile-analysis';
@@ -10,10 +12,11 @@ import {timerStore,type TimerState} from '../lib/timer-store';
 import {PomodoroIndicator} from './pomodoro-indicator';
 
 type TimerRecord=ReturnType<typeof buildManualRecord> & {timer?:{mode:StudyTimer['mode'];elapsed_seconds:number;completed_sets:number;config?:TimerConfig}};
-type Props={data:Data;date:string;materialId:string|null;saving:boolean;blocked:boolean;onOpen:(material:string|null)=>void;onSave:(record:TimerRecord)=>Promise<boolean>;onSettings:()=>void};
+type Props={data:Data;date:string;materialId:string|null;saving:boolean;blocked:boolean;bannerTarget?:HTMLElement|null;onOpen:(material:string|null)=>void;onSave:(record:TimerRecord)=>Promise<boolean>;onSettings:()=>void};
 const phases={focus:'学習',shortBreak:'短休憩',longBreak:'長休憩'};
 const methodNames={manual:'手入力',stopwatch:'ストップウォッチ',pomodoro:'ポモドーロ'};
-export function StudyRecorder({data,materialId,saving,blocked,onOpen,onSave,onSettings}:Props){
+export function StudyRecorder({data,materialId,saving,blocked,bannerTarget,onOpen,onSave,onSettings}:Props){
+ const isMobile=useIsMobile();
  const [stored,setStored]=useState<TimerState|null>(null),[method,setMethod]=useState<'manual'|'stopwatch'|'pomodoro'>('manual'),[now,setNow]=useState(0),[config,setConfig]=useState<TimerConfig>({...defaultTimerConfig}),[subject,setSubject]=useState(''),[material,setMaterial]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[discard,setDiscard]=useState(false),[restored,setRestored]=useState(false),[sound,setSound]=useState(false);
  const state=useRef<TimerState|null>(null),operating=useRef(false),audio=useRef<AudioContext|null>(null),mounted=useRef(true);
  const date=today(data.profile.timezone);
@@ -77,8 +80,9 @@ export function StudyRecorder({data,materialId,saving,blocked,onOpen,onSave,onSe
  const elapsed=timer?timerElapsed(timer,now):null;
  const label=timer?timer.status==='review'?'保存待ち':timer.status==='paused'?'一時停止中':timer.status==='waiting'?`${phases[timer.phase]}の開始待ち`:timer.phase==='focus'?'計測中':`${phases[timer.phase]}中`:'';
  const disabled=busy||saving;
+ const banner=timer&&materialId===null?<button className="timer-banner" onClick={()=>onOpen(timer.materialId)} aria-label={`学習タイマーを開く：${label}`}><span>{restored?'計測を復元 · ':''}{label}</span><strong>{clockText(elapsed!.studyMs)}</strong><span className="timer-banner-name">{data.materials.find(m=>m.id===timer.materialId)?.name||data.subjects.find(s=>s.id===timer.subjectId)?.name||'科目を確認'}</span><span>開く</span></button>:null;
  return <>
- {timer&&<button className="timer-banner" onClick={()=>onOpen(timer.materialId)} aria-label={`学習タイマーを開く：${label}`}><span>{restored?'計測を復元 · ':''}{label}</span><strong>{clockText(elapsed!.studyMs)}</strong><span className="timer-banner-name">{data.materials.find(m=>m.id===timer.materialId)?.name||data.subjects.find(s=>s.id===timer.subjectId)?.name||'科目を確認'}</span><span>開く</span></button>}
+ {bannerTarget&&!isMobile?createPortal(banner,bannerTarget):banner}
  {error&&materialId===null&&<div className="notice error" role="alert">{error}<button onClick={()=>{void reload();}}>タイマーを再読込</button></div>}
  <Dialog open={materialId!==null} onOpenChange={open=>{if(!open&&!disabled)onOpen(null);}}><DialogContent placement="responsive-sheet" className="manual-dialog recorder-dialog" style={viewport} showCloseButton={!disabled} onEscapeKeyDown={e=>{if(disabled)e.preventDefault();}} onPointerDownOutside={e=>e.preventDefault()}>
  <div className="manual-handle"/><DialogHeader><DialogTitle>{timer&&method!=='manual'&&timer.status==='review'?'計測結果を保存':'学習記録を追加'}</DialogTitle><DialogDescription className="sr-only">手入力、ストップウォッチ、ポモドーロから記録方法を選択します。</DialogDescription></DialogHeader>
