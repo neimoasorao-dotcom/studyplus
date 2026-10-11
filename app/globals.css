@@ -139,3 +139,23 @@ table{font-size:.8125rem;font-variant-numeric:tabular-nums}th{background:#f5f8fc
 .sync-status small{color:var(--muted-foreground);font-size:.6875rem}
 .sync-status[data-phase="error"],.sync-status[data-phase="conflict"]{border-color:var(--destructive);color:var(--destructive)}
 @media(max-width:767px){.context .storage-status{order:3;flex-basis:100%;gap:0 8px}.context .storage-status .browser-storage-label{flex-basis:auto;order:0}.context .sync-status{max-width:100%;justify-content:flex-start}}
+
+/* Study timer uses the existing record sheet; desktop analysis layout is unchanged. */
+.recorder-methods{display:flex;flex-wrap:wrap;gap:6px}
+.recorder-methods button{flex:1;min-height:44px;padding:6px 8px;font-size:.8125rem}
+.recorder-methods button[aria-pressed="true"]{background:var(--secondary);font-weight:700;border-color:var(--primary);box-shadow:inset 0 -2px var(--primary)}
+.timer-banner{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;width:100%;min-height:44px;margin:0 0 12px;padding:8px 12px;background:var(--secondary);text-align:left}
+.timer-banner strong{font-variant-numeric:tabular-nums;font-size:1.125rem}
+.timer-banner-name{flex:1;min-width:0;overflow-wrap:anywhere}
+.timer-panel{display:grid;gap:12px;min-width:0}
+.timer-panel input[type="number"],.timer-panel select{min-width:0;width:100%;min-height:44px;font-size:16px}
+.timer-clock{display:block;text-align:center;font-size:clamp(2rem,9vw,3rem);font-weight:700;font-variant-numeric:tabular-nums}
+.timer-phase{text-align:center;font-weight:600}
+.timer-target{overflow-wrap:anywhere;color:var(--muted-foreground)}
+.timer-actions{display:flex;flex-wrap:wrap;gap:8px}
+.timer-actions button{flex:1;min-height:44px}
+.timer-sound{display:flex;align-items:center;gap:8px;min-height:44px}
+@media(max-width:767px){.recorder-dialog{padding-top:18px}.recorder-methods{gap:4px}.recorder-methods button{font-size:.75rem;padding:4px}.timer-banner{gap:4px 8px;font-size:.75rem}.timer-banner-name{flex-basis:100%}.timer-panel .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.timer-sound input{width:18px!important;height:18px;min-height:18px!important;flex:none}
+.timer-panel .manual-buttons{grid-template-columns:1fr}

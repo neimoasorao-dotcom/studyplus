@@ -32,3 +32,5 @@ node tests/pages.browser.mjs
 ```
 
 ファイル直接起動が許可された環境では `STUDYPLUS_OFFLINE_TEST_URL` を省略すると `file://` で検証する。
+
+ストップウォッチ・ポモドロは「記録を追加」から利用できます。計測結果を保存してからHTMLを更新してください。詳しい手順は同梱のTIMER_GUIDE.mdを参照してください。
