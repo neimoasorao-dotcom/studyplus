@@ -59,6 +59,17 @@ try{
  assert(await pc.getByRole('button',{name:'一時停止',exact:true}).isDisabled());assert.equal((await stored(pc)).timer.materialId,'book');assert.equal((await stored(pc)).timer.subjectId,'math');
  await mkdir('/workspace/studyplus-artifacts/shared-timer',{recursive:true});
  await phone.screenshot({path:`/workspace/studyplus-artifacts/shared-timer/${file?'offline':'pages'}-phone.png`});await pc.screenshot({path:`/workspace/studyplus-artifacts/shared-timer/${file?'offline':'pages'}-pc.png`});
+ if(process.env.STUDYPLUS_SHARED_TIMER_PIP==='1'){
+  await pc.getByRole('button',{name:'画面を閉じる（計測・下書きを保持）',exact:true}).click();await pc.getByRole('button',{name:'計測を小窓で表示',exact:true}).click();
+  await wait(()=>pc.evaluate(()=>!!window.documentPictureInPicture?.window?.document.querySelector('.timer-banner-time')));
+  await pc.evaluate(()=>Object.defineProperty(document,'visibilityState',{configurable:true,get:()=> 'hidden'}));
+  await phone.getByRole('button',{name:'一時停止',exact:true}).click();await wait(()=>remote().timer.status==='paused');await wake(pc);
+  await wait(()=>pc.evaluate(()=>window.documentPictureInPicture.window.document.querySelector('.timer-banner')?.dataset.status==='paused'));
+  await phone.getByRole('button',{name:'計測を再開',exact:true}).click();await wait(()=>remote().timer.status==='running');await wake(pc);
+  await wait(()=>pc.evaluate(()=>window.documentPictureInPicture.window.document.querySelector('.timer-banner')?.dataset.status==='running'));
+  assert.equal(await pc.evaluate(()=>window.documentPictureInPicture.window.document.querySelectorAll('button').length),0);
+  await pc.evaluate(()=>{delete document.visibilityState;});await openTimer(pc);
+ }
  const unchanged=timerWrites;await new Promise(r=>setTimeout(r,1100));assert.equal(timerWrites,unchanged,'Ticks never send writes');
  await pc.getByRole('button',{name:'この端末で操作する'}).click();await wait(()=>remote().ownerId!==phoneOwner);const pcOwner=remote().ownerId;
  await checkTimer(phone);await wait(async()=>!(await stored(phone)).sharing.pending&&(await stored(phone)).sharing.base.ownerId===pcOwner);assert(await phone.getByRole('button',{name:'一時停止',exact:true}).isDisabled());
