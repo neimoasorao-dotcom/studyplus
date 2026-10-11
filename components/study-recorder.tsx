@@ -12,14 +12,15 @@ import {timerStore,type TimerState} from '../lib/timer-store';
 import {PomodoroIndicator} from './pomodoro-indicator';
 
 type TimerRecord=ReturnType<typeof buildManualRecord> & {timer?:{mode:StudyTimer['mode'];elapsed_seconds:number;completed_sets:number;config?:TimerConfig}};
-type Props={data:Data;date:string;materialId:string|null;saving:boolean;blocked:boolean;bannerTarget?:HTMLElement|null;onOpen:(material:string|null)=>void;onSave:(record:TimerRecord)=>Promise<boolean>;onSettings:()=>void};
+type Props={initialSubject?:string;onTimerChange?:(timer:StudyTimer|null)=>void;data:Data;date:string;materialId:string|null;saving:boolean;blocked:boolean;bannerTarget?:HTMLElement|null;onOpen:(material:string|null)=>void;onSave:(record:TimerRecord)=>Promise<boolean>;onSettings:()=>void};
 const phases={focus:'学習',shortBreak:'短休憩',longBreak:'長休憩'};
 const methodNames={manual:'手入力',stopwatch:'ストップウォッチ',pomodoro:'ポモドーロ'};
-export function StudyRecorder({data,materialId,saving,blocked,bannerTarget,onOpen,onSave,onSettings}:Props){
+export function StudyRecorder({data,materialId,saving,blocked,bannerTarget,onOpen,onSave,onSettings,initialSubject,onTimerChange}:Props){
  const isMobile=useIsMobile();
  const [stored,setStored]=useState<TimerState|null>(null),[method,setMethod]=useState<'manual'|'stopwatch'|'pomodoro'>('manual'),[now,setNow]=useState(0),[config,setConfig]=useState<TimerConfig>({...defaultTimerConfig}),[subject,setSubject]=useState(''),[material,setMaterial]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[discard,setDiscard]=useState(false),[restored,setRestored]=useState(false),[sound,setSound]=useState(false);
  const state=useRef<TimerState|null>(null),operating=useRef(false),audio=useRef<AudioContext|null>(null),mounted=useRef(true);
  const date=today(data.profile.timezone);
+ useEffect(()=>{onTimerChange?.(stored?.timer??null);},[stored?.timer,onTimerChange]);
  const timer=stored?.timer??null,viewport=useInputViewport(materialId!==null);
  function accept(s:TimerState){state.current=s;setStored(s);}
  async function reload(){try{const s=await timerStore();accept(s);setError('');return s;}catch(e){setError((e as Error).message);return null;}}
@@ -35,7 +36,7 @@ export function StudyRecorder({data,materialId,saving,blocked,bannerTarget,onOpe
  },[]);
  useEffect(()=>{
   if(materialId===null)return;
-  const opener=setTimeout(()=>{const initial=initialRecord(date,data,materialId);setMaterial(initial.material_id);setSubject(initial.subject_id);setDiscard(false);setMethod(state.current?.timer?.mode??'manual');},0);
+  const opener=setTimeout(()=>{const initial=initialRecord(date,data,materialId);setMaterial(initial.material_id);setSubject(initial.subject_id||initialSubject||'');setDiscard(false);setMethod(state.current?.timer?.mode??'manual');},0);
   return()=>clearTimeout(opener);
   // The record opener supplies a new selection only when it opens.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -91,7 +92,7 @@ export function StudyRecorder({data,materialId,saving,blocked,bannerTarget,onOpe
  <Dialog open={materialId!==null} onOpenChange={open=>{if(!open&&!disabled)onOpen(null);}}><DialogContent placement="responsive-sheet" className="manual-dialog recorder-dialog" style={viewport} showCloseButton={!disabled} onEscapeKeyDown={e=>{if(disabled)e.preventDefault();}} onPointerDownOutside={e=>e.preventDefault()}>
  <div className="manual-handle"/><DialogHeader><DialogTitle>{timer&&method!=='manual'&&timer.status==='review'?'計測結果を保存':'学習記録を追加'}</DialogTitle><DialogDescription className="sr-only">手入力、ストップウォッチ、ポモドーロから記録方法を選択します。</DialogDescription></DialogHeader>
  <div className="recorder-methods" role="group" aria-label="記録方法">{(['manual','stopwatch','pomodoro'] as const).map(m=><button key={m} aria-pressed={method===m} disabled={disabled||(m!=='manual'&&!!timer&&timer.mode!==m)} onClick={()=>{setMethod(m);setDiscard(false);}}>{methodNames[m]}</button>)}</div>
- {method==='manual'?materialId!==null&&<ManualRecordForm key={materialId} data={data} date={date} materialId={materialId} saving={saving} onSave={onSave} onClose={()=>onOpen(null)} onSettings={onSettings}/>:<div className="timer-panel">
+ {method==='manual'?materialId!==null&&<ManualRecordForm key={materialId} data={data} date={date} materialId={materialId} initialInput={initialSubject?{...initialRecord(date,data,materialId),subject_id:initialSubject}:undefined} saving={saving} onSave={onSave} onClose={()=>onOpen(null)} onSettings={onSettings}/>:<div className="timer-panel">
  {error&&<div className="notice error" role="alert">{error}<button disabled={disabled} onClick={()=>{void reload();}}>最新の計測を再読込</button></div>}
  {!stored&&<p role="status">計測の保存先を確認しています。</p>}
  {!timer?<>

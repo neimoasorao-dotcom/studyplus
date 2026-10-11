@@ -9,7 +9,7 @@ function moduleFrom(source) {
   const js = ts.transpileModule(source, {compilerOptions: {module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022}}).outputText;
   return import('data:text/javascript;base64,' + Buffer.from(js).toString('base64'));
 }
-const mergeModule = await moduleFrom(readFileSync('lib/sync-merge.ts', 'utf8').replace("import {emptyData, recordKey, type Data} from './analysis';", 'const {emptyData,recordKey}=globalThis.__syncAnalysis;'));
+const mergeModule = await moduleFrom(readFileSync('lib/sync-merge.ts', 'utf8').replace("import {emptyData, recordKey, validDailyTargets, type Data} from './analysis';", 'const {emptyData,recordKey,validDailyTargets}=globalThis.__syncAnalysis;'));
 const {mergeSync, sameSyncData} = mergeModule;
 const base = analysis.emptyData();
 base.subjects = [{id: 'math', name: '数学', color: '#ffcc00'}];
