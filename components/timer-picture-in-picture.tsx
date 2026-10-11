@@ -2,6 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
 import {clockText,timerElapsed,type StudyTimer} from '../lib/study-timer';
+import {subscribeColorMode,colorModeSnapshot} from '../lib/color-mode';
 
 type PictureInPictureAPI={requestWindow:(options:{width:number;height:number;preferInitialWindowPlacement:boolean})=>Promise<Window>};
 function pictureInPictureAPI(){return (window as Window&{documentPictureInPicture?:PictureInPictureAPI}).documentPictureInPicture;}
@@ -30,6 +31,11 @@ export function useTimerPictureInPicture(timer:StudyTimer|null,name:string,now:n
   const interval=popup.window.setInterval(tick,250);
   return()=>popup.window.clearInterval(interval);
  },[popup,onTick]);
+ useEffect(()=>{
+  if(!popup)return;
+  const apply=()=>{const resolved=colorModeSnapshot().split(':')[1];popup.window.document.documentElement.classList.toggle('dark',resolved==='dark');popup.window.document.documentElement.style.colorScheme=resolved;};
+  apply();return subscribeColorMode(apply);
+ },[popup]);
  async function open(){
   if(opening.current||!current.current)return;
   if(owned.current&&!owned.current.closed){owned.current.focus();return;}

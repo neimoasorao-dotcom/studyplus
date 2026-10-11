@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import {colorModeBootstrap} from "../lib/color-mode";
 
 export const metadata: Metadata = {
   title: "Studyplus 学習分析",
@@ -19,7 +20,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja">
+    <html lang="ja" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{__html:colorModeBootstrap}}/></head>
       <body className="antialiased">{children}</body>
     </html>
   );
