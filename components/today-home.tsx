@@ -6,8 +6,8 @@ import {todayHome} from '../lib/today-home';
 import type {Data} from '../lib/analysis';
 import {timerElapsed,clockText,type StudyTimer} from '../lib/study-timer';
 
-type Props={data:Data;date:string;timer:StudyTimer|null;blocked:boolean;saving:boolean;onRecord:(material?:string,subject?:string)=>void;onGoal:(minutes:number|null)=>Promise<boolean>;onGoalEditing:(open:boolean)=>void;go:(page:string)=>void;format:(n:number|null)=>string;chart:ReactNode;records:ReactNode;condition:number|null};
-export function TodayHome({data,date,timer,blocked,saving,onRecord,onGoal,onGoalEditing,go,format:f,chart,records,condition}:Props){
+type Props={timerReadOnly?:boolean;data:Data;date:string;timer:StudyTimer|null;blocked:boolean;saving:boolean;onRecord:(material?:string,subject?:string)=>void;onGoal:(minutes:number|null)=>Promise<boolean>;onGoalEditing:(open:boolean)=>void;go:(page:string)=>void;format:(n:number|null)=>string;chart:ReactNode;records:ReactNode;condition:number|null};
+export function TodayHome({data,date,timer,timerReadOnly=false,blocked,saving,onRecord,onGoal,onGoalEditing,go,format:f,chart,records,condition}:Props){
  const h=useMemo(()=>todayHome(data,date),[data,date]),candidate=h.achieved?null:h.candidate,[editing,setEditing]=useState(false),[hours,setHours]=useState(''),[minutes,setMinutes]=useState(''),[error,setError]=useState(''),[material,setMaterial]=useState(''),[now,setNow]=useState(0);
  useEffect(()=>{const tick=()=>setNow(Date.now());tick();if(!timer||timer.status!=='running')return;const id=setInterval(tick,1000);return()=>clearInterval(id);},[timer?.status]);
  useEffect(()=>{setEditing(false);onGoalEditing(false);setMaterial('');return()=>onGoalEditing(false);},[date,onGoalEditing]);
@@ -15,7 +15,7 @@ export function TodayHome({data,date,timer,blocked,saving,onRecord,onGoal,onGoal
  function open(v:boolean){if(saving)return;setEditing(v);onGoalEditing(v);setError('');if(v){const value=data.goals.site.daily_targets?.[date]??h.target,n=value==null?null:Math.round(value);setHours(n==null?'':String(Math.floor(n/60)));setMinutes(n==null?'':String(Math.round(n)%60));}}
  async function save(clear=false){let n:number|null=null;if(!clear){if(!/^\d+$/.test(hours)||!/^\d+$/.test(minutes)||Number(minutes)>59){setError('時間・分を整数で入力してください。分は0〜59です。');return;}n=Number(hours)*60+Number(minutes);if(!Number.isInteger(n)||n<1||n>1440){setError('目標は1分〜24時間で設定してください。');return;}}if(await onGoal(n)){setEditing(false);onGoalEditing(false);}else setError('保存できませんでした。入力は保持しています。');}
  const subject=timer?data.subjects.find(s=>s.id===timer.subjectId):candidate;
- const title=timer?timer.status==='review'?'計測結果を保存する':timer.status==='paused'?'学習を再開する':timer.status==='waiting'?'次の区間を始める':timer.phase==='focus'?'学習を続ける':'休憩中':h.achieved?'今日の目標・目安に到達':candidate?`次の候補：${candidate.name}`:'科目・教材を選んで始める';
+ const title=timer&&timerReadOnly?'共有計測を確認する':timer?timer.status==='review'?'計測結果を保存する':timer.status==='paused'?'学習を再開する':timer.status==='waiting'?'次の区間を始める':timer.phase==='focus'?'学習を続ける':'休憩中':h.achieved?'今日の目標・目安に到達':candidate?`次の候補：${candidate.name}`:'科目・教材を選んで始める';
  const activeMaterial=timer?data.materials.find(m=>m.id===timer.materialId)?.name:null;
  const selectedMaterials=data.materials.filter(m=>!candidate||m.subject_id===candidate.id);
  const elapsed=timer?timerElapsed(timer,now):null,timerSaved=timer&&data.study_records.some(r=>r.id===timer.id||r.source_id===timer.id);

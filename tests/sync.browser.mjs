@@ -14,7 +14,7 @@ await mkdir('.sites-runtime', {recursive: true});
 const scriptPath = path.resolve('.sites-runtime/sync-browser-worker.mjs');
 await build({entryPoints: ['sync-worker/worker.ts'], outfile: scriptPath, bundle: true, format: 'esm', platform: 'browser', target: 'es2022'});
 const githubMode = process.env.STUDYPLUS_GITHUB_SYNC_TEST === '1';
-let githubState = null, githubSha = '0'.repeat(40);
+let githubState = null, githubSha = '0'.repeat(40), timerState=null, timerSha='0'.repeat(40);
 const offlineFile = process.env.STUDYPLUS_SYNC_OFFLINE_FILE;
 const pcBase = offlineFile ? 'http://127.0.0.1:5181/studyplus_offline.html' : base;
 const key = githubMode ? 'github_pat_'+'a'.repeat(50) : 'a'.repeat(43), url = 'http://127.0.0.1:5180';
@@ -38,6 +38,10 @@ if (githubMode) for (const context of contexts) await context.route('https://api
  assert(u.pathname.startsWith('/repos/test/private-data'));
  const reply = (body, status=200) => route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
  if(u.pathname==='/repos/test/private-data')return reply({private:true,default_branch:'main'});
+ if(u.pathname==='/repos/test/private-data/contents/studyplus-timer.json'){
+  if(request.method()==='PUT'){const body=request.postDataJSON();if((timerState&&body.sha!==timerSha)||(!timerState&&body.sha))return reply({},409);timerState=JSON.parse(Buffer.from(body.content,'base64').toString('utf8'));timerSha=String(timerState.revision).padStart(40,'0');return reply({content:{sha:timerSha}},201);}
+  if(!timerState)return reply({},404);const raw=JSON.stringify(timerState);return reply({type:'file',sha:timerSha,size:Buffer.byteLength(raw),encoding:'base64',content:Buffer.from(raw).toString('base64')});
+ }
  assert.equal(u.pathname,'/repos/test/private-data/contents/studyplus-sync.json');
  if(request.method()==='PUT'){
   const body=request.postDataJSON();assert.equal(body.branch,'main');
@@ -90,17 +94,17 @@ try {
  // Existing exports contain Data only, never the shared authentication key.
  await phone.getByRole('button', {name: 'データ・設定メニュー'}).click();const downloaded = phone.waitForEvent('download');await phone.getByRole('button', {name: '全データをJSON出力', exact: true}).click();const download = await downloaded;const exported = await readFile(await download.path(), 'utf8');assert(!exported.includes(key));assert.equal(JSON.parse(exported).study_records.length, 3);await phone.keyboard.press('Escape');
  // A timer's confirmed record shares the existing sync transport. Its running
- // draft stays in this device's separate database.
+ // draft is separate from learning-data JSON (GitHub also shares its state).
  await phone.getByRole('button',{name:/^(この教材で)?記録する$/}).click();await phone.getByRole('button',{name:'ストップウォッチ',exact:true}).click();await phone.getByRole('button',{name:'計測を開始',exact:true}).click();await phone.getByRole('button',{name:'一時停止',exact:true}).waitFor();
  await phone.evaluate(()=>{const original=Date.now;window.restoreTimerClock=()=>{Date.now=original;};Date.now=()=>original()+65000;});
  await phone.getByRole('button',{name:'終了して保存へ',exact:true}).click();await phone.locator('.manual-form').getByRole('button',{name:'保存',exact:true}).click();await phone.getByRole('dialog').waitFor({state:'hidden'});await phone.evaluate(()=>window.restoreTimerClock());
  await wait(async()=>(await remote()).data.study_records.length===4);
  const timerRecord=(await remote()).data.study_records.find(r=>r.timer);assert(timerRecord);assert.equal(timerRecord.duration_minutes,1);assert.equal(timerRecord.timer.mode,'stopwatch');
- await open(pc);await pc.getByRole('button',{name:'今すぐ同期',exact:true}).click();await wait(async()=>(await stored(pc)).data.study_records.some(r=>r.id===timerRecord.id));await pc.keyboard.press('Escape');assert.equal(await pc.locator('.timer-banner').count(),0,'Running drafts must not synchronize');
+ await open(pc);await pc.getByRole('button',{name:'今すぐ同期',exact:true}).click();await wait(async()=>(await stored(pc)).data.study_records.some(r=>r.id===timerRecord.id));await pc.keyboard.press('Escape');if(githubMode){await pc.evaluate(()=>window.dispatchEvent(new Event('focus')));await wait(async()=>!(await pc.locator('.timer-banner').count()));}else assert.equal(await pc.locator('.timer-banner').count(),0,'Cloudflare timers remain local');
  // Two devices change the same field: retain both versions and stop syncing.
  async function edit(p, minutes) {await p.evaluate(minutes => new Promise((resolve, reject) => {const r = indexedDB.open('studyplus-dashboard:/studyplus/');r.onsuccess = () => {const db = r.result, tx = db.transaction('state', 'readwrite'), store = tx.objectStore('state'), q = store.get('main');q.onsuccess = () => {const s = q.result;s.data.study_records[0].duration_minutes = minutes;s.revision++;store.put(s, 'main');};tx.oncomplete = () => {db.close();resolve();};tx.onabort = () => reject(tx.error);};}), minutes);}
  await setOffline(contexts[1],true);await edit(pc, 99);await edit(phone, 51);await phone.reload();await wait(async () => (await remote()).data.study_records[0].duration_minutes === 51);
  await setOffline(contexts[1],false);await pc.reload();await pc.locator('.context').waitFor();await indicator(pc).locator(':scope[data-phase=conflict]').waitFor();await pc.locator('.sync-status').click();await pc.getByText(/^競合が/).waitFor();assert.equal((await stored(pc)).data.study_records[0].duration_minutes, 99);assert.equal((await remote()).data.study_records[0].duration_minutes, 51);
  await pc.getByRole('button', {name: 'この端末の同期を解除'}).click();await pc.keyboard.press('Escape');await indicator(pc).locator(':scope[data-phase=disconnected]').waitFor();assert.equal((await stored(pc)).data.study_records.length, 4);assert.deepEqual(errors, []);
- console.log('PASS '+(githubMode?'mock GitHub API':'local Worker/D1')+' browser sync ('+(offlineFile?'Pages + standalone HTML':'two Pages clients')+'): two isolated devices, initial pairing, offline additions/merge, no-op convergence, private-key exclusion, edit conflicts without overwrite, disconnect preserves records, timer records synchronize without drafts');
+ console.log('PASS '+(githubMode?'mock GitHub API':'local Worker/D1')+' browser sync ('+(offlineFile?'Pages + standalone HTML':'two Pages clients')+'): two isolated devices, initial pairing, offline additions/merge, no-op convergence, private-key exclusion, edit conflicts without overwrite, disconnect preserves records, timer records synchronize independently of active state');
 } finally {await browser.close();await mf.dispose();if(offlineServer)await new Promise(resolve => offlineServer.close(resolve));}
