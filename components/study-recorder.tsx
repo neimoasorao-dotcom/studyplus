@@ -80,7 +80,11 @@ export function StudyRecorder({data,materialId,saving,blocked,bannerTarget,onOpe
  const elapsed=timer?timerElapsed(timer,now):null;
  const label=timer?timer.status==='review'?'保存待ち':timer.status==='paused'?'一時停止中':timer.status==='waiting'?`${phases[timer.phase]}の開始待ち`:timer.phase==='focus'?'計測中':`${phases[timer.phase]}中`:'';
  const disabled=busy||saving;
- const banner=timer&&materialId===null?<button className="timer-banner" onClick={()=>onOpen(timer.materialId)} aria-label={`学習タイマーを開く：${label}`}><span>{restored?'計測を復元 · ':''}{label}</span><strong>{clockText(elapsed!.studyMs)}</strong><span className="timer-banner-name">{data.materials.find(m=>m.id===timer.materialId)?.name||data.subjects.find(s=>s.id===timer.subjectId)?.name||'科目を確認'}</span><span>開く</span></button>:null;
+ const mobileTime=timer?timer.mode==='pomodoro'&&timer.status!=='review'?`${phases[timer.phase]} ${clockText(elapsed!.remainingMs)}`:`${timer.mode==='stopwatch'?'経過':'学習'} ${clockText(elapsed!.studyMs)}`:'';
+ const timerSubject=timer?data.subjects.find(s=>s.id===timer.subjectId)?.name||'科目未設定':'';
+ const banner=timer&&materialId===null?<button className="timer-banner" onClick={()=>onOpen(timer.materialId)} aria-label={`学習タイマーを開く：${label}${isMobile?`、${mobileTime}、${timerSubject}`:''}`}>
+ {isMobile?<><span className="timer-banner-state">{{running:'計測中',paused:'停止中',waiting:'待機',review:'保存待ち'}[timer.status]}</span><strong className="timer-banner-time">{mobileTime}</strong><span className="timer-banner-subject" title={timerSubject}>{timerSubject}</span><span className="timer-banner-open">開く</span></>:<><span>{restored?'計測を復元 · ':''}{label}</span><strong>{clockText(elapsed!.studyMs)}</strong><span className="timer-banner-name">{data.materials.find(m=>m.id===timer.materialId)?.name||data.subjects.find(s=>s.id===timer.subjectId)?.name||'科目を確認'}</span><span>開く</span></>}
+ </button>:null;
  return <>
  {bannerTarget&&!isMobile?createPortal(banner,bannerTarget):banner}
  {error&&materialId===null&&<div className="notice error" role="alert">{error}<button onClick={()=>{void reload();}}>タイマーを再読込</button></div>}
