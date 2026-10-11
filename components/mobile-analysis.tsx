@@ -17,7 +17,6 @@ export function MobileAnalysis({children, sections = defaultSections, enabled = 
   const [selected, setSelected] = useState(sections[0].id);
   const [visited, setVisited] = useState<string[]>([sections[0].id]);
   const id = useId();
-  const anchor = useRef<HTMLDivElement>(null);
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
   if (!mobile || !enabled) return <>{children}</>;
 
@@ -42,11 +41,10 @@ export function MobileAnalysis({children, sections = defaultSections, enabled = 
   function choose(next: string) {
     setSelected(next);
     setVisited(old => old.includes(next) ? old : [...old, next]);
-    anchor.current?.scrollIntoView({block: 'start', behavior: 'instant'});
   }
   return <>
     {groups.get('always')}
-    <div ref={anchor} className="mobile-analysis">
+    <div className="mobile-analysis">
       {available.length > 1 && <div role="tablist" aria-label="ページ内の表示" className="analysis-tabs">
         {available.map((section, index) => <button key={section.id} ref={element => {tabs.current[index] = element;}}
           type="button" role="tab" id={`${id}-${section.id}-tab`} aria-controls={`${id}-${section.id}-panel`}
@@ -55,7 +53,7 @@ export function MobileAnalysis({children, sections = defaultSections, enabled = 
             const target = event.key === 'ArrowRight' ? (index + 1) % available.length
               : event.key === 'ArrowLeft' ? (index - 1 + available.length) % available.length
               : event.key === 'Home' ? 0 : event.key === 'End' ? available.length - 1 : null;
-            if (target !== null) {event.preventDefault(); choose(available[target].id); tabs.current[target]?.focus();}
+            if (target !== null) {event.preventDefault(); choose(available[target].id); tabs.current[target]?.focus({preventScroll: true});}
           }}>{section.label}</button>)}
       </div>}
       {available.map(section => (visited.includes(section.id) || section.id === active) && <div key={section.id}
