@@ -38,7 +38,7 @@ print(json.dumps({'pixels':sum(p!=(0,0,0) for p in d.getdata()),'maxChannel':max
   }
  }
 }
-async function start(mode){await page('materials');await p.getByRole('button',{name:/^(この教材で)?記録する$/,exact:true}).click();await p.getByRole('button',{name:mode,exact:true}).click();await p.getByRole('button',{name:'計測を開始',exact:true}).click();await p.getByRole('button',{name:'一時停止',exact:true}).waitFor();await p.getByRole('button',{name:'画面を閉じる（計測・下書きを保持）',exact:true}).click();await p.getByRole('dialog').waitFor({state:'hidden'});await p.locator('.timer-banner').waitFor();}
+async function start(mode){await page('materials');await p.getByRole('button',{name:/^(この教材で)?記録する$/,exact:true}).click();await p.getByRole('button',{name:mode,exact:true}).click();await p.getByRole('button',{name:'計測を開始',exact:true}).click();await p.getByRole('button',{name:'一時停止',exact:true}).waitFor();await p.locator('[data-slot=dialog-close]').click();await p.getByRole('dialog').waitFor({state:'hidden'});await p.locator('.timer-banner').waitFor();}
 async function discard(){await p.locator('.timer-banner').click();await p.getByRole('button',{name:'この計測を破棄',exact:true}).click();await p.getByRole('button',{name:'計測を破棄する',exact:true}).click();await p.getByRole('button',{name:'計測を開始',exact:true}).waitFor();await p.keyboard.press('Escape');await p.getByRole('dialog').waitFor({state:'hidden'});}
 try {
  await p.goto(base+'#materials');await p.locator('.context').waitFor();await seed();
