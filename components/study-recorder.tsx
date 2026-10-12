@@ -1,4 +1,5 @@
 'use client';
+import {recordMaterials} from '@/lib/record-materials';
 import {useEffect,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
 import {useIsMobile} from '../hooks/use-mobile';
@@ -151,7 +152,7 @@ export function StudyRecorder({data,materialId,saving,blocked,bannerTarget,onOpe
  {error&&<div className="notice error" role="alert">{error}<button disabled={disabled} onClick={()=>{void reload();}}>最新の計測を再読込</button></div>}
  {!stored&&<p role="status">計測の保存先を確認しています。</p>}
  {!timer?<>
- <div className="manual-two"><label className="field"><span>計測する科目</span><select value={subject} onChange={e=>{const value=e.target.value;setSubject(value);if(!data.materials.some(m=>m.id===material&&(!value||m.subject_id===value)))setMaterial('');}} disabled={disabled}><option value="">選択してください</option>{data.subjects.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label><label className="field"><span>計測する教材</span><select value={material} disabled={disabled} onChange={e=>{setMaterial(e.target.value);const m=data.materials.find(m=>m.id===e.target.value);if(m&&data.subjects.some(s=>s.id===m.subject_id))setSubject(m.subject_id);}}><option value="">教材なし</option>{data.materials.filter(m=>!subject||m.subject_id===subject).map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label></div>
+ <div className="manual-two"><label className="field"><span>計測する科目</span><select value={subject} onChange={e=>{const value=e.target.value;setSubject(value);if(!data.materials.some(m=>m.id===material&&(!value||m.subject_id===value)))setMaterial('');}} disabled={disabled}><option value="">選択してください</option>{data.subjects.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label><label className="field"><span>計測する教材</span><select value={material} disabled={disabled} onChange={e=>{setMaterial(e.target.value);const m=data.materials.find(m=>m.id===e.target.value);if(m&&data.subjects.some(s=>s.id===m.subject_id))setSubject(m.subject_id);}}><option value="">教材なし</option>{recordMaterials(data,date).filter(m=>!subject||m.subject_id===subject).map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label></div>
  {method==='pomodoro'&&<div className="form-grid">{([['focus','学習（分）'],['shortBreak','短休憩（分）'],['longBreak','長休憩（分）'],['sets','長休憩までのセット数']] as const).map(([key,name])=><label className="field" key={key}><span>{name}</span><input type="number" min={1} max={{focus:180,shortBreak:60,longBreak:120,sets:12}[key]} step={1} value={Number.isNaN(config[key])?'':config[key]} onChange={e=>{setConfig({...config,[key]:e.target.value===''?NaN:Number(e.target.value)});setError('');}}/></label>)}</div>}
  {!data.subjects.length&&<button onClick={onSettings}>科目を設定する</button>}
  <p className="muted">{method==='pomodoro'?'休憩は記録に含めません。次の区間はボタンで開始します。':'一時停止中の時間は記録に含めません。'}{stored?.sharing?'計測状況はGitHubの共有先と同期します。':'計測はこの端末に保存します。'}</p>
