@@ -20,7 +20,7 @@ const timer=p=>state(p,'studyplus-timer-v1','timer');
 async function wait(check){for(let i=0;i<100;i++){if(await check())return;await new Promise(r=>setTimeout(r,100));}throw Error('Timer wait timed out');}
 async function advance(p,ms){await p.evaluate(ms=>localStorage.setItem('timer-test-offset',String(Number(localStorage.getItem('timer-test-offset')||0)+ms)),ms);await new Promise(r=>setTimeout(r,350));}
 async function open(p){await p.getByRole('button',{name:'この教材で記録する',exact:true}).click();await p.getByRole('group',{name:'記録方法'}).waitFor();}
-async function close(p){await p.getByRole('button',{name:'画面を閉じる（計測・下書きを保持）',exact:true}).click();}
+async function close(p){await p.locator('[data-slot=dialog-close]').click();}
 async function discard(p){await p.getByRole('button',{name:'この計測を破棄',exact:true}).click();await p.getByRole('button',{name:'計測を破棄する',exact:true}).click();await wait(async()=>!(await timer(p)).timer);await p.keyboard.press('Escape');}
 async function checkRecorderLayout(p) {
  for (const width of [360,390,430,1280,1440]) {

@@ -13,7 +13,7 @@ async function wait(check){for(let i=0;i<100;i++){if(await check())return;await 
 async function pip(){return p.evaluate(()=>{const w=window.documentPictureInPicture?.window;if(!w||w.closed)return null;const el=w.document.querySelector('.timer-banner'),t=el?.querySelector('.timer-banner-time');return {text:el?.textContent,time:t?.textContent,name:el?.querySelector('.timer-banner-name')?.textContent,status:el?.dataset.status,phase:el?.dataset.phase,color:t?w.getComputedStyle(t).color:null,font:t?w.getComputedStyle(t).fontSize:null,animation:t?w.getComputedStyle(t).animationName:null,buttons:w.document.querySelectorAll('button').length,overflow:w.document.documentElement.scrollWidth>w.innerWidth,height:w.innerHeight,width:w.innerWidth};});}
 async function advance(ms){await p.evaluate(ms=>localStorage.setItem('pip-test-offset',String(Number(localStorage.getItem('pip-test-offset')||0)+ms)),ms);}
 async function openRecord(){await p.getByRole('button',{name:'記録を追加',exact:true}).click();}
-async function closeRecord(){await p.getByRole('button',{name:'画面を閉じる（計測・下書きを保持）',exact:true}).click();}
+async function closeRecord(){await p.locator('[data-slot=dialog-close]').click();}
 async function stored(){return p.evaluate(()=>new Promise(resolve=>{const r=indexedDB.open('studyplus-timer-v1',1);r.onsuccess=()=>{const db=r.result,tx=db.transaction('timer'),q=tx.objectStore('timer').get('main');q.onsuccess=()=>resolve(q.result);tx.oncomplete=()=>db.close();};}));}
 try{
  await p.goto(base);await p.getByRole('heading',{name:'今日の進捗',exact:true}).waitFor();
