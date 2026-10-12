@@ -9,8 +9,9 @@ export const metadata: Metadata = {
     "codex-preview": "development",
   },
   icons: {
-    icon: "/favicon.svg",
+    icon: [{url:"/favicon-32.png",type:"image/png",sizes:"32x32"},{url:"/favicon.svg",type:"image/svg+xml",sizes:"any"}],
     shortcut: "/favicon.svg",
+    apple: [{url:"/apple-touch-icon.png",sizes:"180x180",type:"image/png"}],
   },
 };
 

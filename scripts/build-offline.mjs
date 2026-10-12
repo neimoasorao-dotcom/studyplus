@@ -32,8 +32,10 @@ for (const match of styles) {
   const css = await readFile(path.resolve(output, match[1]), 'utf8');
   html = html.replace(match[0], () => `<style>${css}</style>`);
 }
-const favicon = await readFile(path.join(root, 'public/favicon.svg'));
-html = html.replace(/<link\b[^>]*rel="icon"[^>]*>/, () => `<link rel="icon" href="data:image/svg+xml;base64,${favicon.toString('base64')}">`);
+for (const [name,type] of [['favicon.svg','image/svg+xml'],['favicon-32.png','image/png'],['apple-touch-icon.png','image/png']]) {
+  const icon = await readFile(path.join(root, 'public', name));
+  html = html.replace(new RegExp(`(<link\\b[^>]*href=")[^"]*${name.replaceAll('.', '\\.')}(")`, 'g'), (_match,before,after) => `${before}data:${type};base64,${icon.toString('base64')}${after}`);
+}
 html = html.replace('<title>Studyplus 学習分析</title>', '<title>Studyplus 学習分析・オフライン版</title>');
 if (/<(?:script|link)\b[^>]*(?:src|href)="(?!data:)/i.test(html)) throw new Error('External bundle dependency remains');
 await mkdir(path.join(root, 'offline'), {recursive: true});
