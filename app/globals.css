@@ -302,8 +302,15 @@ table{font-size:.8125rem;font-variant-numeric:tabular-nums}th{background:#f5f8fc
 .recorder-dialog select,.recorder-dialog option{background:var(--card);color:var(--foreground);color-scheme:light}
 .dark .recorder-dialog select,.dark .recorder-dialog option{color-scheme:dark}
 .subject-color-legend{display:flex;justify-content:center;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:var(--foreground)}
-.subject-color-legend label{display:inline-flex;align-items:center;gap:4px;max-width:100%;overflow-wrap:anywhere}
-.subject-color-swatch{position:relative;display:inline-block;width:44px;height:44px;padding:15px;background-clip:content-box;flex-shrink:0}
-.subject-color-swatch input{position:absolute;inset:0;opacity:0;width:44px;height:44px;cursor:pointer}
-.subject-color-swatch:focus-within{outline:2px solid var(--primary);outline-offset:3px}
-.material-order-actions{display:flex;gap:6px}.material-order-actions button{min-width:44px;min-height:44px}
+
+.subject-color-item{display:inline-flex;align-items:center;gap:4px;max-width:100%;overflow-wrap:anywhere}
+.subject-color-swatch{display:inline-block;width:14px;height:14px;min-height:14px;flex-shrink:0;border:0;border-radius:0;padding:0}
+.subject-color-swatch:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
+.record-material-order{margin:16px 0}.material-order-list{max-height:360px;overflow:auto;overscroll-behavior:contain}
+.material-order-row{display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border);padding:5px 0}
+.material-order-row>span{flex:1;min-width:0;overflow-wrap:anywhere}.material-order-row small{display:block;color:var(--muted-foreground)}
+.material-order-row button{min-width:40px;min-height:44px}.material-drag-handle{touch-action:none;cursor:grab}
+.record-manager-dialog{max-height:85dvh;overflow-y:auto;overscroll-behavior:contain}
+.record-manager-list article{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);padding:12px 0}
+.record-manager-list article>div:first-child{min-width:0;overflow-wrap:anywhere}.record-manager-list article span,.record-manager-list article small{display:block}
+@media(width<=767px){.record-manager-list article{align-items:stretch;flex-direction:column}.record-manager-list button{min-height:44px}}

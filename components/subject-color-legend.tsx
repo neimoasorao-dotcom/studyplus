@@ -1,0 +1,7 @@
+'use client';
+import {useState} from 'react';
+import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@/components/ui/dialog';
+export function SubjectColorLegend({series,onColor,disabled}:any){
+ const [editing,setEditing]=useState<{id:string;name:string;color:string}|null>(null);
+ return <><div className="subject-color-legend">{series.map((s:any)=><span key={s.key} className="subject-color-item">{s.key==='unknown'?<i className="subject-color-swatch" style={{background:s.color}}/>:<button className="subject-color-swatch" style={{background:s.color}} aria-label={`${s.name}の色を変更`} disabled={disabled} onClick={()=>setEditing({id:s.key,name:s.name,color:s.color||'#64748b'})}/>}<span>{s.name}</span></span>)}</div><Dialog open={!!editing} onOpenChange={open=>{if(!open&&!disabled)setEditing(null);}}><DialogContent><DialogHeader><DialogTitle>{editing?.name}の色</DialogTitle><DialogDescription>調整後に保存してください。キャンセルすると元の色を保ちます。</DialogDescription></DialogHeader>{editing&&<><input type="color" aria-label="科目色を調整" value={editing.color} onChange={e=>setEditing({...editing,color:e.target.value})}/><div className="actions"><button disabled={disabled} onClick={()=>setEditing(null)}>キャンセル</button><button className="primary" disabled={disabled} onClick={async()=>{if(await onColor(editing.id,editing.color))setEditing(null);}}>色を保存</button></div></>}</DialogContent></Dialog></>;
+}
