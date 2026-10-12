@@ -20,5 +20,5 @@ for (const name of generated) await copyFile(path.join(output, 'pages-assets', n
 // Keeping index.html out
 // of the checkout prevents Vite/Vinext dev from serving the Pages entry over App.
 await writeFile(path.join(root, 'pages-entry.html'), `---\nlayout: null\npermalink: /\n---\n${html}`);
-await copyFile(path.join(output, 'favicon.svg'), path.join(root, 'favicon.svg'));
+for (const name of ['favicon.svg','favicon-32.png','apple-touch-icon.png']) await copyFile(path.join(output, name), path.join(root, name));
 console.log('Prepared pages-entry.html, pages-assets, and favicon.svg for the existing main/root Pages source.');
