@@ -1,0 +1,100 @@
+[
+  {
+    "width": 1440,
+    "page": "dashboard",
+    "height": 1000,
+    "overflow": false,
+    "buttons": 29
+  },
+  {
+    "width": 1440,
+    "page": "time",
+    "height": 2138,
+    "overflow": false,
+    "buttons": 30
+  },
+  {
+    "width": 1440,
+    "page": "subjects",
+    "height": 1381,
+    "overflow": false,
+    "buttons": 22
+  },
+  {
+    "width": 1440,
+    "page": "materials",
+    "height": 1099,
+    "overflow": false,
+    "buttons": 27
+  },
+  {
+    "width": 1440,
+    "page": "goals",
+    "height": 1000,
+    "overflow": false,
+    "buttons": 21
+  },
+  {
+    "width": 1440,
+    "page": "exams",
+    "height": 1000,
+    "overflow": false,
+    "buttons": 22
+  },
+  {
+    "width": 1440,
+    "page": "ai",
+    "height": 1000,
+    "overflow": false,
+    "buttons": 24
+  },
+  {
+    "width": 390,
+    "page": "dashboard",
+    "height": 1614,
+    "overflow": false,
+    "buttons": 22
+  },
+  {
+    "width": 390,
+    "page": "time",
+    "height": 1101,
+    "overflow": false,
+    "buttons": 22
+  },
+  {
+    "width": 390,
+    "page": "subjects",
+    "height": 853,
+    "overflow": false,
+    "buttons": 17
+  },
+  {
+    "width": 390,
+    "page": "materials",
+    "height": 848,
+    "overflow": false,
+    "buttons": 19
+  },
+  {
+    "width": 390,
+    "page": "goals",
+    "height": 844,
+    "overflow": false,
+    "buttons": 17
+  },
+  {
+    "width": 390,
+    "page": "exams",
+    "height": 923,
+    "overflow": false,
+    "buttons": 15
+  },
+  {
+    "width": 390,
+    "page": "ai",
+    "height": 844,
+    "overflow": false,
+    "buttons": 17
+  }
+]
