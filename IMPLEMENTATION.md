@@ -1,12 +1,12 @@
 # Studyplus 学習分析 — 実装対応表
 
-唯一の機能基準は `SPECIFICATION.md`。学習データの自動取得・AIへの直接API接続は行わず、仕様22の分析パケット経由を採用。
+機能基準は `SPECIFICATION.md`、承認済みの統合UI仕様は [docs/unified-workspace.md](docs/unified-workspace.md)。学習データの自動取得・AIへの直接API接続は行わず、仕様22の分析パケット経由を採用。
 
 | 仕様 | 実装 |
 |---|---|
 | 4–5 データ運用・重複・原情報 | `analysis.mergeImport`、読込確認Dialog、`imports.original`、全データJSON出力 |
-| 6 ナビゲーション | PC Sidebar、スマホ下部8項目（ホーム・学習時間・科目・教材・目標・模試・AI分析・設定）、独立した設定Dialog |
-| 7 Dashboard | THIS WEEK、LAST 7 DAYS、LEARNING CONDITIONの3ブロック |
+| 6 ナビゲーション | PCサイドバー／スマホ下部の共通5分類（ホーム・学習・分析・記録・学習管理）。設定は共通メニュー |
+| 7 Dashboard | 今日・週・開始の統合面、7日推移、今日の科目。学習状態は分析への入口 |
 | 8–11 スコア・信頼度 | `analysis.scores`、`confidence`、調整可能な係数・閾値 |
 | 12.1–12.8 週間詳細 | `WeekView`、`GoalTable`、`RecordTable`、週履歴と3種配分シナリオ |
 | 13.1–13.12 時間詳細 | `TimeView`、日次比較・累積・トレンド・曜日・ばらつき・前週重ね・4週・科目・時間帯・Best/Worst・異常値・期間選択 |

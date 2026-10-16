@@ -1,32 +1,82 @@
 'use client';
-import {recordMaterials} from '@/lib/record-materials';
-import {useState,useRef} from 'react';
-import {ChevronDown} from 'lucide-react';
-import {type Data} from '@/lib/analysis';
-import {initialRecord,buildManualRecord,manualDuplicateCount,nextRecord,type RecordInput} from '@/lib/manual-record';
-
-type Props={data:Data;date:string;materialId?:string;saving:boolean;onSave:(record:ReturnType<typeof buildManualRecord>)=>Promise<boolean>;onClose:()=>void;onSettings:()=>void;initialInput?:RecordInput;recordId?:string;singleSave?:boolean};
-export function ManualRecordForm({data,date,materialId='',saving,onSave,onClose,onSettings,initialInput,recordId,singleSave=false}:Props){
- const [input,setInput]=useState(()=>initialInput??initialRecord(date,data,materialId)),[details,setDetails]=useState(false),[error,setError]=useState(''),[duplicates,setDuplicates]=useState(0),[confirmed,setConfirmed]=useState(false),[notice,setNotice]=useState('');
- const busy=useRef(false),minutesField=useRef<HTMLInputElement>(null);
- const update=(key:keyof RecordInput,value:string)=>{setInput(old=>({...old,[key]:value}));setError('');setDuplicates(0);setConfirmed(false);setNotice('');};
- function chooseMaterial(value:string){const material=data.materials.find(m=>m.id===value);const subject=data.subjects.some(s=>s.id===material?.subject_id)?material.subject_id:'';setInput(old=>({...old,material_id:value,subject_id:value?subject:old.subject_id}));setError('');setDuplicates(0);setConfirmed(false);setNotice('');}
- async function submit(keepOpen:boolean){if(saving||busy.current)return;setError('');setNotice('');let record;try{record=buildManualRecord(input,data,date,recordId??crypto.randomUUID());const count=manualDuplicateCount(data,record);if(count&&!confirmed&&!data.study_records.some(r=>recordId&&r.id===recordId)){setDuplicates(count);return;}}catch(e:any){setError(e.message);return;}
-  busy.current=true;try{if(await onSave(record)){if(keepOpen){setInput(nextRecord(input));setDuplicates(0);setConfirmed(false);setNotice('記録を追加しました');minutesField.current?.focus();}else onClose();}else setError('保存できませんでした。入力内容は残っています。画面のエラーを確認してください。');}finally{busy.current=false;}
- }
- const material=data.materials.find(m=>m.id===input.material_id),autoSubject=material&&material.subject_id===input.subject_id&&data.subjects.some(s=>s.id===input.subject_id);
- return <form className="manual-form" onSubmit={e=>{e.preventDefault();submit(false);}} noValidate>
- {!data.subjects.length&&<div className="notice"><p>先に設定で科目を追加してください。</p><button type="button" onClick={onSettings}>科目を設定する</button></div>}
+import { SubjectMaterialPicker } from './study/subject-material-picker';
+import { type Dispatch, type SetStateAction, useState, useRef } from 'react';
+import { ChevronDown } from 'lucide-react';
+import { type Data } from '@/lib/analysis';
+import { initialRecord, buildManualRecord, manualDuplicateCount, nextRecord, type RecordInput } from '@/lib/manual-record';
+type Props = {
+    value?: RecordInput;
+    onChange?: Dispatch<SetStateAction<RecordInput | null>>;
+    data: Data;
+    date: string;
+    materialId?: string;
+    saving: boolean;
+    onSave: (record: ReturnType<typeof buildManualRecord>) => Promise<boolean>;
+    onClose: () => void;
+    onSettings: () => void;
+    initialInput?: RecordInput;
+    recordId?: string;
+    singleSave?: boolean;
+};
+export function ManualRecordForm({ value, onChange, data, date, materialId = '', saving, onSave, onClose, onSettings, initialInput, recordId, singleSave = false }: Props) {
+    const [localInput, setLocalInput] = useState(() => initialInput ?? initialRecord(date, data, materialId)), [details, setDetails] = useState(false), [error, setError] = useState(''), [duplicates, setDuplicates] = useState(0), [confirmed, setConfirmed] = useState(false), [notice, setNotice] = useState('');
+    const input = value ?? localInput;
+    const setInput: Dispatch<SetStateAction<RecordInput>> = next => { const resolved = typeof next === 'function' ? next(input) : next; setLocalInput(resolved); onChange?.(resolved); };
+    const busy = useRef(false), minutesField = useRef<HTMLInputElement>(null);
+    const update = (key: keyof RecordInput, value: string) => { setInput(old => ({ ...old, [key]: value })); setError(''); setDuplicates(0); setConfirmed(false); setNotice(''); };
+    function chooseMaterial(value: string) { const material = data.materials.find(m => m.id === value); const subject = data.subjects.some(s => s.id === material?.subject_id) ? material.subject_id : ''; setInput(old => ({ ...old, material_id: value, subject_id: value ? subject : old.subject_id })); setError(''); setDuplicates(0); setConfirmed(false); setNotice(''); }
+    async function submit(keepOpen: boolean) {
+        if (saving || busy.current)
+            return;
+        setError('');
+        setNotice('');
+        let record;
+        try {
+            record = buildManualRecord(input, data, date, recordId ?? crypto.randomUUID());
+            const count = manualDuplicateCount(data, record);
+            if (count && !confirmed && !data.study_records.some(r => recordId && r.id === recordId)) {
+                setDuplicates(count);
+                return;
+            }
+        }
+        catch (e: any) {
+            setError(e.message);
+            return;
+        }
+        busy.current = true;
+        try {
+            if (await onSave(record)) {
+                if (keepOpen) {
+                    setInput(nextRecord(input));
+                    setDuplicates(0);
+                    setConfirmed(false);
+                    setNotice('記録を追加しました');
+                    minutesField.current?.focus();
+                }
+                else
+                    onClose();
+            }
+            else
+                setError('保存できませんでした。入力内容は残っています。画面のエラーを確認してください。');
+        }
+        finally {
+            busy.current = false;
+        }
+    }
+    const material = data.materials.find(m => m.id === input.material_id), autoSubject = material && material.subject_id === input.subject_id && data.subjects.some(s => s.id === input.subject_id);
+    return <form className="manual-form" onSubmit={e => { e.preventDefault(); submit(false); }} noValidate>
+ {!data.subjects.length && <div className="notice"><p>先に設定で科目を追加してください。</p><button type="button" onClick={onSettings}>科目を設定する</button></div>}
  <fieldset disabled={saving}>
- <label className="field"><span>日付</span><input type="date" value={input.date} max={date} onChange={e=>update('date',e.target.value)} required/></label>
- <div className="manual-two"><label className="field"><span>教材</span><select aria-label="教材" value={input.material_id} onChange={e=>chooseMaterial(e.target.value)}><option value="">教材なし</option>{recordMaterials(data,date).filter(m=>!input.subject_id||m.subject_id===input.subject_id).map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label><label className="field"><span>科目</span><select aria-label="科目" value={input.subject_id} onChange={e=>{const value=e.target.value;setInput(old=>({...old,subject_id:value,material_id:data.materials.some(m=>m.id===old.material_id&&(!value||m.subject_id===value))?old.material_id:''}));setError('');setDuplicates(0);setConfirmed(false);setNotice('');}} required><option value="">選択してください</option>{data.subjects.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label></div>
- {autoSubject&&<p className="manual-auto">教材に設定された科目を選択しました</p>}
- <div className="field"><span>学習時間</span><div className="manual-duration"><input aria-label="学習時間の時間" type="number" inputMode="numeric" min={0} max={24} step={1} value={input.hours} onChange={e=>update('hours',e.target.value)} required/><span>時間</span><input ref={minutesField} aria-label="学習時間の分" type="number" inputMode="numeric" min={0} max={59} step={1} value={input.minutes} onChange={e=>update('minutes',e.target.value)} required/><span>分</span></div></div>
- <label className="field"><span>学習内容（任意）</span><input value={input.content} placeholder="例：No. 101〜150を復習" onChange={e=>update('content',e.target.value)}/></label>
- <button type="button" className="manual-details-toggle" aria-expanded={details} aria-controls="manual-record-details" onClick={()=>setDetails(!details)}><ChevronDown size={16}/>時刻・メモを入力</button>
- {details&&<div id="manual-record-details" className="manual-extra"><div className="manual-two"><label className="field"><span>開始時刻（任意）</span><input type="time" value={input.start_time} onChange={e=>update('start_time',e.target.value)}/></label><label className="field"><span>終了時刻（任意）</span><input type="time" value={input.end_time} onChange={e=>update('end_time',e.target.value)}/></label></div><label className="field"><span>メモ（任意）</span><textarea value={input.comment} onChange={e=>update('comment',e.target.value)}/></label></div>}
- {duplicates>0&&<div className="manual-duplicate" role="status"><p>同じ日付・教材・科目・学習時間の記録が{duplicates}件あります。</p><label><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/>別の記録として追加する</label></div>}
- {error&&<p className="notice error" role="alert">{error}</p>}{notice&&<p className="manual-success" aria-live="polite">{notice}</p>}
- <div className="manual-buttons"><button type="submit" disabled={saving||!data.subjects.length}>{saving?'保存中…':'保存'}</button>{!singleSave&&<button type="button" className="primary" disabled={saving||!data.subjects.length} onClick={()=>submit(true)}>{saving?'保存中…':'保存して続ける'}</button>}<button type="button" className="mobile-only manual-close" disabled={saving} onClick={onClose}>閉じる（保存しない）</button></div>
+ <label className="field"><span>日付</span><input type="date" value={input.date} max={date} onChange={e => update('date', e.target.value)} required/></label>
+ <SubjectMaterialPicker data={data} date={date} subject={input.subject_id} material={input.material_id} onChange={(subject, material) => { setInput(old => ({ ...old, subject_id: subject, material_id: material })); setError(''); setDuplicates(0); setConfirmed(false); setNotice(''); }}/>
+
+ {autoSubject && <p className="manual-auto">教材に設定された科目を選択しました</p>}
+ <div className="field"><span>学習時間</span><div className="manual-duration"><input aria-label="学習時間の時間" type="number" inputMode="numeric" min={0} max={24} step={1} value={input.hours} onChange={e => update('hours', e.target.value)} required/><span>時間</span><input ref={minutesField} aria-label="学習時間の分" type="number" inputMode="numeric" min={0} max={59} step={1} value={input.minutes} onChange={e => update('minutes', e.target.value)} required/><span>分</span></div></div>
+ <label className="field"><span>学習内容（任意）</span><input value={input.content} placeholder="例：No. 101〜150を復習" onChange={e => update('content', e.target.value)}/></label>
+ <button type="button" className="manual-details-toggle" aria-expanded={details} aria-controls="manual-record-details" onClick={() => setDetails(!details)}><ChevronDown size={16}/>時刻・メモを入力</button>
+ {details && <div id="manual-record-details" className="manual-extra"><div className="manual-two"><label className="field"><span>開始時刻（任意）</span><input type="time" value={input.start_time} onChange={e => update('start_time', e.target.value)}/></label><label className="field"><span>終了時刻（任意）</span><input type="time" value={input.end_time} onChange={e => update('end_time', e.target.value)}/></label></div><label className="field"><span>メモ（任意）</span><textarea value={input.comment} onChange={e => update('comment', e.target.value)}/></label></div>}
+ {duplicates > 0 && <div className="manual-duplicate" role="status"><p>同じ日付・教材・科目・学習時間の記録が{duplicates}件あります。</p><label><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)}/>別の記録として追加する</label></div>}
+ {error && <p className="notice error" role="alert">{error}</p>}{notice && <p className="manual-success" aria-live="polite">{notice}</p>}
+ <div className="manual-buttons"><button type="submit" disabled={saving || !data.subjects.length}>{saving ? '保存中…' : '保存'}</button>{!singleSave && <button type="button" className="primary" disabled={saving || !data.subjects.length} onClick={() => submit(true)}>{saving ? '保存中…' : '保存して続ける'}</button>}<button type="button" className="mobile-only manual-close" disabled={saving} onClick={onClose}>閉じる（保存しない）</button></div>
  </fieldset></form>;
 }

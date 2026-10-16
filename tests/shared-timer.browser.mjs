@@ -40,7 +40,7 @@ async function wake(p){await p.evaluate(()=>window.dispatchEvent(new Event('focu
 async function openTimer(p){if(await p.getByRole('dialog').count()===0)await p.locator('.timer-banner').click();await p.locator('.timer-sharing').waitFor();}
 async function checkTimer(p){await openTimer(p);await p.getByRole('button',{name:'共有計測を再確認',exact:true}).click();}
 async function pair(p){
- if(p===phone)await p.getByRole('button',{name:'データ・設定メニュー'}).click();else await p.locator('.sync-status').click();
+ if(p===phone)await p.getByRole('button',{name:'データ・設定メニュー'}).click();else await p.getByRole('button',{name:'データ・設定メニュー'}).click();
  await p.getByLabel('保存先リポジトリ').fill('test/private-data');await p.getByLabel('GitHubトークン',{exact:true}).fill(key);await p.getByRole('button',{name:'接続して同期を開始'}).click();await p.getByText(/^同期済み：/).waitFor();await p.keyboard.press('Escape');await wake(p);await wait(async()=>!!(await stored(p))?.sharing);
 }
 async function start(p,mode='ストップウォッチ'){
