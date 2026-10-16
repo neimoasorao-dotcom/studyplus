@@ -6,7 +6,7 @@
  --chart-1:#24585D;--chart-2:#718E96;--chart-3:#34735D;--chart-4:#806995;--chart-5:#9A703A;--chart-6:#A85F76;--chart-comparison:#92ABAE;--chart-target:#9A5C2E;--chart-unknown:#7B858E;
  --timer-focus:#315EAD;--timer-rest:#34735D;--chart-cursor:var(--secondary);
  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-6:24px;--space-8:32px;--space-10:40px;
- --radius-surface:12px;--radius-control:8px;--shadow-overlay:0 12px 36px #10282B24;--nav-height:64px;
+ --radius-surface:12px;--radius-control:8px;--shadow-overlay:0 12px 36px #10282B24;--nav-height:56px;
 }
 :root.dark {
  --background:#141D20;--foreground:#E5EEEE;--card:#1C292D;--card-foreground:#E5EEEE;--popover:#1C292D;--popover-foreground:#E5EEEE;
