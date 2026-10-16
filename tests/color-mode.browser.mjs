@@ -18,7 +18,7 @@ try{
  await beforePaint.addInitScript(()=>localStorage.setItem('studyplus.colorMode','dark'));
  const bootHTML=(await readFile(file||'dist-pages/index.html','utf8')).replace(/<script\b(?=[^>]*type="module")[^>]*>[\s\S]*?<\/script>/g,'');
  await beforePaint.route(base,r=>r.fulfill({contentType:'text/html',body:bootHTML}));
- const early=await beforePaint.newPage();await early.goto(base);assert.equal(await early.evaluate(()=>document.documentElement.dataset.resolvedColorMode),'dark');assert.equal(await early.evaluate(()=>getComputedStyle(document.body).backgroundColor),'rgb(17, 21, 28)');assert.equal(await early.locator('.color-mode-toggle').count(),0);await beforePaint.close();
+ const early=await beforePaint.newPage();await early.goto(base);assert.equal(await early.evaluate(()=>document.documentElement.dataset.resolvedColorMode),'dark');assert.equal(await early.evaluate(()=>getComputedStyle(document.body).backgroundColor),'rgb(20, 29, 32)');assert.equal(await early.locator('.color-mode-toggle').count(),0);await beforePaint.close();
  const p=await context.newPage();await p.goto(base);await p.getByRole('heading',{name:'今日の進捗',exact:true}).waitFor();await mode(p,'system','dark');
  const d=A.emptyData();d.subjects=[{id:'math',name:'数学・長い科目名のテスト',color:'#b33c88',ideal_ratio:1,target_days_per_week:5}];d.materials=[{id:'book',name:'長い教材名のテスト'.repeat(3),subject_id:'math'}];d.study_records=[{id:'today',date:A.today(),subject_id:'math',material_id:'book',duration_minutes:60}];d.goals.site.weekly_total_minutes=1000;
  await p.locator('input[type=file]').setInputFiles({name:'fixture.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(d))});await p.getByRole('button',{name:'この内容で追加する',exact:true}).click();await p.getByRole('dialog').waitFor({state:'hidden'});const original=JSON.stringify((await state(p)).data);
@@ -30,14 +30,14 @@ try{
   await p.setViewportSize({width,height:900});
   for(const m of ['light','dark']){
    while(await toggle.getAttribute('data-mode')!==m)await toggle.click();await mode(p,m,m);
-   for(const page of ['dashboard','materials','subjects','time','goals','exams','ai']){await p.goto(base+'#'+page);await p.locator('.context').waitFor({state:'attached'});assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width}/${m}/${page}: overflow`);}
+   for(const page of ['dashboard','materials','subjects','time','goals','exams','ai']){await p.goto(base+'#'+page);await p.locator('[data-slot=skeleton]').first().waitFor({state:'hidden'});assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width}/${m}/${page}: overflow`);}
    await p.goto(base+'#dashboard');await p.getByRole('heading',{name:'今日の進捗',exact:true}).waitFor();await p.screenshot({path:`/workspace/studyplus-artifacts/color-mode/${file?'offline':'pages'}-${m}-${width}.png`,fullPage:true});
   }
  }
  const textColors=await p.evaluate(()=>{const root=getComputedStyle(document.documentElement),probe=document.createElement('span');document.body.append(probe);const color=name=>{probe.style.color=`var(${name})`;return getComputedStyle(probe).color;};const values=['--foreground','--muted-foreground','--card','--background','--primary','--primary-foreground','--warning','--success','--destructive'].map(color);probe.remove();return values;});
  assert(contrast(textColors[0],textColors[2])>=7,'dark foreground contrast');assert(contrast(textColors[1],textColors[2])>=4.5,'dark supporting text contrast');assert(contrast(textColors[4],textColors[5])>=4.5,'primary button contrast');for(const color of textColors.slice(6))assert(contrast(color,textColors[2])>=4.5,'role color contrast');
  // Native input dialogs inherit the selected palette.
- await p.getByRole('button',{name:'記録を追加',exact:true}).click();await p.locator('.manual-form').waitFor();assert.equal(await p.getByRole('dialog').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(27, 32, 41)');await p.keyboard.press('Escape');
+ await p.getByRole('button',{name:'記録を追加',exact:true}).click();await p.locator('.manual-form').waitFor();assert.equal(await p.getByRole('dialog').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(28, 41, 45)');await p.keyboard.press('Escape');
  // Another tab follows saved mode changes and keyboard activation works.
  const other=await context.newPage();await other.goto(base);await other.locator('.color-mode-toggle').waitFor();await toggle.focus();await p.keyboard.press('Enter');await mode(p,'system','dark');await mode(other,'system','dark');await toggle.press('Enter');await mode(p,'light','light');await mode(other,'light','light');await other.close();
  // PiP updates immediately on manual and system changes.
