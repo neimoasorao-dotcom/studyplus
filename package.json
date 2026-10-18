@@ -15,7 +15,8 @@
     "build:pages": "vite build --config vite.pages.config.ts",
     "prepare:pages": "node scripts/prepare-pages.mjs",
     "build:offline": "node scripts/build-offline.mjs",
-    "deploy:sync": "node scripts/deploy-sync.mjs"
+    "deploy:sync": "node scripts/deploy-sync.mjs",
+    "preview:pages": "node scripts/preview-pages.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

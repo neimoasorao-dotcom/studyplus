@@ -2,6 +2,8 @@
 import { useEffect, useState, useMemo, type ReactNode } from 'react';
 import { ChevronRight, Target, BookOpen, Play, Check } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
+import { Distribution } from './data/insights';
+import { subjectSlices, materialSlices } from '@/lib/visual-insights';
 import { StartAction } from './study/start-action';
 import { SubjectMaterialPicker, type RecordMethod } from './study/subject-material-picker';
 import { todayHome } from '../lib/today-home';
@@ -28,7 +30,7 @@ type Props = {
 export function TodayHome({ selection, onSelection, data, date, timer, timerReadOnly = false, blocked, saving, onRecord, onGoal, onGoalEditing, go, format: f, chart, records, condition }: Props) {
     const material = data.materials.some(m => m.id === selection.material) ? selection.material : '';
     const chosenSubject = data.subjects.some(s => s.id === selection.subject) ? selection.subject : null;
-    const h = useMemo(() => todayHome(data, date), [data, date]), candidate = h.achieved ? null : h.candidate, [editing, setEditing] = useState(false), [hours, setHours] = useState(''), [minutes, setMinutes] = useState(''), [error, setError] = useState(''), [now, setNow] = useState(0);
+    const h = useMemo(() => todayHome(data, date), [data, date]), candidate = h.achieved ? null : h.candidate, [editing, setEditing] = useState(false), [hours, setHours] = useState(''), [minutes, setMinutes] = useState(''), [error, setError] = useState(''), [now, setNow] = useState(0), [subjectDetail, setSubjectDetail] = useState('');
     useEffect(() => { const tick = () => setNow(Date.now()); tick(); if (!timer || timer.status !== 'running')
         return; const id = setInterval(tick, 1000); return () => clearInterval(id); }, [timer?.status]);
     useEffect(() => { setEditing(false); onGoalEditing(false); return () => onGoalEditing(false); }, [date, onGoalEditing]);
@@ -92,7 +94,8 @@ export function TodayHome({ selection, onSelection, data, date, timer, timerRead
   <section className="panel summary-panel today-subjects" aria-labelledby="today-subjects-title">
    <div className="panel-head"><div><h2 id="today-subjects-title">今日の科目・教材</h2><p className="muted">何を勉強したか</p></div><BookOpen size={18}/></div>
    {!h.subjects.length && <p className="muted">科目は設定から追加できます。</p>}
-   <div className="today-subject-list">{h.subjects.map(s => <details key={s.id} className="today-subject"><summary><span className="today-subject-name"><i style={{ background: s.color || 'var(--chart-unknown)' }}/>{s.name}</span><strong>{s.minutes > 0 ? f(s.minutes) : '記録なし'}</strong><ChevronRight size={15}/><small className="today-material-preview">{s.materials.slice(0, 2).map((m: any) => m.name).join(' · ')}{s.materials.length > 2 && ` ほか${s.materials.length - 2}教材`}</small><div className="today-subject-bar" aria-hidden="true"><span style={{ width: (h.minutes ? s.minutes / h.minutes * 100 : 0) + '%', background: s.color || 'var(--chart-unknown)' }}/></div></summary><div className="today-materials">{s.materials.map((m: any) => <p key={m.id}><span>{m.name}</span><strong>{f(Number(m.minutes))}</strong></p>)}{!s.materials.length && <p className="muted">この科目の教材記録はありません。</p>}<button onClick={() => go('subjects?subject=' + encodeURIComponent(s.id))}>科目の分析</button><button disabled={blocked || s.id === 'unknown'} onClick={() => onRecord('', s.id)}>この科目で記録する</button></div></details>)}</div>
+   <Distribution label="今日の科目配分" items={subjectSlices(data,h.rs)} format={f} selectedId={subjectDetail} onSelect={setSubjectDetail}/>
+   {subjectDetail && <div className="subject-distribution-detail"><h3>{data.subjects.find(s=>s.id===subjectDetail)?.name || '科目未設定'}の教材</h3><Distribution label="選択した科目の教材配分" items={materialSlices(data,h.rs.filter(r=>subjectDetail==='__unassigned__'?!data.subjects.some(s=>s.id===r.subject_id):r.subject_id===subjectDetail))} format={f} onSelect={id=>{if(data.materials.some(m=>m.id===id))go('study?material='+encodeURIComponent(id));}}/>{data.subjects.some(s=>s.id===subjectDetail)&&<div className="actions"><button onClick={()=>go('subjects?subject='+encodeURIComponent(subjectDetail))}>科目の分析</button><button disabled={blocked} onClick={()=>onRecord('',subjectDetail)}>この科目で記録する</button></div>}</div>}
    <button className="today-records-link" onClick={() => go('records?date=' + date)}>今日の記録を見る（{h.rs.length}件）<ChevronRight size={16}/></button>
   </section>
   <Dialog open={editing} onOpenChange={open}><DialogContent className="daily-goal-dialog" onPointerDownOutside={e => { if (saving)
