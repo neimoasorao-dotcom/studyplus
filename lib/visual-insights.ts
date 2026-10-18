@@ -1,8 +1,9 @@
 import * as A from './analysis';
 
 export type Slice = { id: string; name: string; value: number; color?: string };
-export function distributionGroups(items: Slice[], limit = 5, groupIds?: string[]) {
+export function distributionGroups(items: Slice[], limit = 5, groupIds?: string[], preserveOrder = false) {
   const valid = items.map(x => ({ ...x, value: Number.isFinite(x.value) ? Math.max(0, x.value) : 0 }));
+  if (!groupIds && preserveOrder && valid.length > limit + 1) groupIds = valid.slice(0, limit).map(x => x.id);
   const positive = valid.filter(x => x.value > 0).sort((a, b) => b.value - a.value);
   const rest = positive.slice(limit);
   const groupedRest = groupIds ? valid.filter(x => !groupIds.includes(x.id)) : rest;
