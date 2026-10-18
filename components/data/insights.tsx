@@ -10,7 +10,7 @@ export function Distribution({ items, format, label, onSelect, selectedId, requi
   items: Slice[]; format: (n: number) => string; label: string; onSelect?: (id: string) => void; selectedId?: string; requirePercentTotal?: boolean; preserveOrder?: boolean; groupIds?: string[];
 }) {
   const [expanded, setExpanded] = useState(false), [selection, setSelection] = useState('');
-  const group = distributionGroups(items, 5, groupIds), selected = group.items.find(x => x.id === (selectedId ?? selection));
+  const group = distributionGroups(items, 5, groupIds, preserveOrder), selected = group.items.find(x => x.id === (selectedId ?? selection));
   const valid = group.total > 0 && (!requirePercentTotal || Math.abs(group.total - 100) < .01);
   let offset = 0;
   const choose = (id: string) => { if (id === '__other__') { setExpanded(true); return; } setSelection(id); onSelect?.(id); };
