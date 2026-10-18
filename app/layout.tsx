@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "../styles/tokens.css";
 import "../styles/workspace.css";
+import "../styles/insights.css";
 import { colorModeBootstrap } from "../lib/color-mode";
 export const metadata: Metadata = {
     title: "Studyplus 学習分析",

@@ -1,0 +1,20 @@
+'use client';
+import { useMemo, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import * as A from '@/lib/analysis';
+import { heatValue, monthDays, monthOffset, subjectSlices } from '@/lib/visual-insights';
+import { Distribution } from './insights';
+
+export function LearningHeatmap({ data, today, format, onRecords }: {data:A.Data;today:string;format:(n:number)=>string;onRecords:(date:string)=>void}) {
+  const [metric,setMetric]=useState<'time'|'balance'>('time'),[month,setMonth]=useState(today.slice(0,7)),[selected,setSelected]=useState(''),[preview,setPreview]=useState('');
+  const buttons=useRef(new Map<string,HTMLButtonElement>()),months=[monthOffset(month,-2),monthOffset(month,-1),month];
+  const values=useMemo(()=>new Map(months.flatMap(m=>monthDays(m).dates).map(day=>[day,heatValue(data,day,today,metric)])),[data,today,month,metric]);
+  const text=(day:string)=>{const v=values.get(day);return `${day} ${metric==='time'?'学習時間':'直近7日のBalance'} ${v?.state==='future'?'未来の日':v?.value===null?'未評価・取得範囲外':metric==='time'?format(v?.value||0):A.round(v?.value||0)+' / 100'}${day===today?'・今日の途中経過':''}`;};
+  const legend=metric==='time'?['0分','1〜29分','30〜59分','1〜2h未満','2〜4h未満','4h以上']:['0〜19','20〜39','40〜59','60〜79','80〜100'];
+  return <div className="learning-heatmap"><div className="heatmap-toolbar"><div className="heatmap-metrics" role="group" aria-label="ヒートマップの指標"><button aria-pressed={metric==='time'} onClick={()=>setMetric('time')}>学習時間</button><button aria-pressed={metric==='balance'} onClick={()=>setMetric('balance')}>Balance</button></div><div className="heatmap-month-controls"><button aria-label="前の月" onClick={()=>{setMonth(monthOffset(month,-1));setPreview('');}}><ChevronLeft size={16}/></button><strong>{month.replace('-','年')}月</strong><button aria-label="次の月" disabled={month>=today.slice(0,7)} onClick={()=>{setMonth(monthOffset(month,1));setPreview('');}}><ChevronRight size={16}/></button></div></div>
+    <p className="muted">{metric==='balance'?'各日までの直近7日間を、現在の設定・既存の式で評価。未評価は0点とは区別します。':'濃い日ほど学習時間が長いことを示します。取得範囲内の記録がない日は0分です。'}</p>
+    <div className="heatmap-months">{months.map(m=>{const {padding,dates}=monthDays(m);const focusDate=dates.includes(selected)?selected:m+'-01';return <section className="heatmap-month" key={m} aria-label={m+'のカレンダー'}><h3>{m.replace('-','年')}月</h3><div className="heatmap-weekdays" aria-hidden="true">{Array.from('月火水木金土日').map(d=><span key={d}>{d}</span>)}</div><div className="heatmap-grid">{Array.from({length:padding},(_,i)=><span key={'pad'+i}/>)}{dates.map(day=>{const v=values.get(day)!;return <button key={day} ref={el=>{if(el)buttons.current.set(day,el);else buttons.current.delete(day);}} data-state={v.state} data-level={v.level} data-today={day===today} aria-pressed={selected===day} aria-label={text(day)} disabled={v.state==='future'} tabIndex={day===focusDate?0:-1} onMouseEnter={()=>setPreview(day)} onFocus={()=>setPreview(day)} onClick={()=>{setSelected(day);setPreview(day);}} onKeyDown={e=>{const shift=({ArrowRight:1,ArrowLeft:-1,ArrowDown:7,ArrowUp:-7} as Record<string,number>)[e.key];if(shift!==undefined){e.preventDefault();const target=buttons.current.get(A.addDays(day,shift));if(target&&!target.disabled&&target.getClientRects().length)target.focus({preventScroll:true});}}}>{Number(day.slice(-2))}</button>;})}</div></section>;})}</div>
+    <p className="heatmap-preview" role="status">{preview&&values.has(preview)?text(preview):'日付に触れると値を表示。選ぶと科目内訳を確認できます。'}</p><div className="heatmap-legend" aria-label="色の濃さの凡例">{legend.map((label,i)=><span key={label}><i data-level={metric==='time'?i:i+1}/>{label}</span>)}<span><i data-state="missing"/>未評価・取得前</span><span><i data-state="future"/>未来</span></div>
+    {selected&&<div className="heatmap-selection"><h3>{selected} の学習</h3><Distribution label={selected+'の科目配分'} items={subjectSlices(data,A.records(data,selected,selected))} format={format}/><button onClick={()=>onRecords(selected)}>この日の記録を見る</button></div>}
+  </div>;
+}
