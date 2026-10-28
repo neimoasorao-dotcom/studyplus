@@ -4,10 +4,12 @@ import {useCallback, useEffect, useRef, useState} from 'react';
 import {Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription} from './ui/dialog';
 import {connect, connectGitHub, disconnect, getConnection, synchronize} from '../github-pages/device-sync';
 import type {SyncResult} from '../github-pages/device-sync';
+import {toast} from 'sonner';
+import type {RefreshResult} from './interaction/pull-to-refresh';
 
 export type SyncStatus = {phase: 'disconnected' | 'waiting' | 'syncing' | 'synced' | 'offline' | 'conflict' | 'error'; syncedAt?: string};
 
-export function DeviceSync({open, onOpenChange, paused, revision, onApplied, onStatusChange, children}: {children?: ReactNode; open: boolean; onOpenChange: (v: boolean) => void; paused: boolean; revision: number; onApplied: () => Promise<void>; onStatusChange: (status: SyncStatus) => void}) {
+export function DeviceSync({open, onOpenChange, paused, revision, onApplied, onStatusChange, onRefreshReady, children}: {children?: ReactNode; open: boolean; onOpenChange: (v: boolean) => void; paused: boolean; revision: number; onApplied: () => Promise<void>; onStatusChange: (status: SyncStatus) => void; onRefreshReady?: (handler: (() => Promise<RefreshResult>) | null) => void}) {
   const [provider, setProvider] = useState<'github' | 'cloudflare'>('github'), [repository, setRepository] = useState('neimoasorao-dotcom/studyplus-data'), [branch, setBranch] = useState('main');
   const [url, setUrl] = useState(''), [key, setKey] = useState(''), [connected, setConnected] = useState(false), [busy, setBusy] = useState(false), [message, setMessage] = useState('未接続：記録はこのブラウザ内に保存されています。'), [result, setResult] = useState<SyncResult | null>(null);
   const [phase, setPhase] = useState<SyncStatus['phase']>('disconnected'), [syncedAt, setSyncedAt] = useState<string>(), [online, setOnline] = useState(true);
@@ -30,21 +32,23 @@ export function DeviceSync({open, onOpenChange, paused, revision, onApplied, onS
     previousRevision.current = revision;
   }, [revision, connected]);
   useEffect(() => {pause.current = paused; applied.current = onApplied;}, [paused, onApplied]);
-  const sync = useCallback(async () => {
-    if (pause.current || applying.current || stopped.current) return;
-    if (!navigator.onLine) {setPhase('offline'); return;}
+  const sync = useCallback(async (): Promise<RefreshResult> => {
+    if (pause.current || applying.current || stopped.current) return {kind:'warning',message:'入力中、または同期中です。終わってから更新してください'};
+    if (!navigator.onLine) {setPhase('offline'); return {kind:'warning',message:'オフラインです。端末内の記録は保持し、接続後に同期します'};}
     applying.current = true; setBusy(true);
     try {
       const r = await synchronize(() => !pause.current && !stopped.current);
-      if (stopped.current) return;
+      if (stopped.current) return {kind:'info',message:'更新を中断しました'};
       setResult(r);
       setMessage(r.warning ? r.warning : r.conflicts.length ? `競合が${r.conflicts.length}件あります。記録は上書きしていません。` : r.syncedAt ? '同期済み：' + new Date(r.syncedAt).toLocaleString('ja-JP') : '未接続：端末内に保存されています。');
       if (r.changed) {appliedRevision.current = true; await applied.current();}
       setPhase(r.warning ? 'error' : r.conflicts.length ? 'conflict' : r.syncedAt ? 'synced' : 'disconnected');
       if (r.syncedAt) setSyncedAt(r.syncedAt);
-    } catch (e) {if (!stopped.current) {setPhase(navigator.onLine ? 'error' : 'offline'); setMessage((e as Error).message + ' 端末内保存は引き続き利用できます。');}}
+      return r.warning ? {kind:'warning',message:r.warning} : r.conflicts.length ? {kind:'warning',message:'同期が競合しています。記録は上書きしていません。データ・設定で確認してください'} : r.syncedAt ? {kind:'success',message:'同期して表示を更新しました'} : {kind:'info',message:'端末内の記録を確認しました'};
+    } catch (e) {if (!stopped.current) {setPhase(navigator.onLine ? 'error' : 'offline'); setMessage((e as Error).message + ' 端末内保存は引き続き利用できます。');}return {kind:'error',message:'同期できませんでした。端末内の記録は保持しています'};}
     finally {applying.current = false; if (!stopped.current) setBusy(false);}
   }, []);
+  useEffect(() => {onRefreshReady?.(connected ? sync : null);return () => onRefreshReady?.(null);}, [connected,sync,onRefreshReady]);
   useEffect(() => {
     stopped.current = false;
     getConnection().then(c => {if (!stopped.current && c) {setConnected(true); setPhase('waiting'); setSyncedAt(c.syncedAt); setProvider(c.provider); setUrl(c.url); if(c.repository)setRepository(c.repository); if(c.branch)setBranch(c.branch); setMessage(c.syncedAt ? '最終同期：' + new Date(c.syncedAt).toLocaleString('ja-JP') : '接続済み：同期待ち');}}).catch(() => {setPhase('error'); setMessage('同期設定を読み込めません。');});
@@ -54,15 +58,16 @@ export function DeviceSync({open, onOpenChange, paused, revision, onApplied, onS
     if (!connected) return;
     const timer = setInterval(() => {void sync();}, 30000);
     const initial = setTimeout(() => {void sync();}, 1000);
-    window.addEventListener('online', sync); window.addEventListener('focus', sync);
-    return () => {clearInterval(timer); clearTimeout(initial); window.removeEventListener('online', sync); window.removeEventListener('focus', sync);};
+    const refresh = () => {void sync();};
+    window.addEventListener('online', refresh); window.addEventListener('focus', refresh);
+    return () => {clearInterval(timer); clearTimeout(initial); window.removeEventListener('online', refresh); window.removeEventListener('focus', refresh);};
   }, [connected, revision, paused, sync]);
   function backupRemote() {
     if (!result?.remote) return;
     const href = URL.createObjectURL(new Blob([JSON.stringify(result.remote, null, 2)], {type: 'application/json'}));
     const a = document.createElement('a'); a.href = href; a.download = 'studyplus_shared_backup.json'; a.click(); setTimeout(() => URL.revokeObjectURL(href), 1000);
   }
-  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="sync-dialog utility-dialog">
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent placement="responsive-sheet" sheetSnap className="sync-dialog utility-dialog">
     <DialogHeader><DialogTitle>{children?'データ・設定':'端末間の同期'}</DialogTitle><DialogDescription>{children?'記録の読込・バックアップ、設定と端末間の同期':'iPhone・PCで同じ保存先を設定します。'}</DialogDescription></DialogHeader>
     {children}
     <section className="sync-settings" aria-label="端末間の同期"><h2>端末間の同期</h2><p className="muted">トークン・共有キーはJSON出力には含まれません。</p>
@@ -75,7 +80,7 @@ export function DeviceSync({open, onOpenChange, paused, revision, onApplied, onS
       <p className="muted">保存ファイルは studyplus-sync.json。非公開リポジトリだけに接続します。GitHubの変更履歴には削除前の記録も残ります。</p>
     </> : <label className="field"><span>同期API URL</span><input type="url" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://studyplus-sync.example.workers.dev" disabled={busy || connected} autoCapitalize="none" autoCorrect="off"/></label>}
     {!connected && <><label className="field"><span>{provider === 'github' ? 'GitHubトークン' : '共有キー'}</span><input type="password" value={key} onChange={e => setKey(e.target.value)} autoComplete="off" disabled={busy} autoCapitalize="none" autoCorrect="off"/></label>{provider === 'github' && <p className="muted"><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">Fine-grained tokenを作成</a>：保存先リポジトリだけを選択し、ContentsをRead and writeにします。トークンは各端末に保存し、チャットには貼らないでください。</p>}</>}
-    <div className="sync-actions">{connected ? <><button disabled={busy || paused} onClick={() => void sync()}>今すぐ同期</button><button disabled={busy} onClick={async () => {try {await disconnect(); setConnected(false); setPhase('disconnected'); setSyncedAt(undefined); setKey(''); setResult(null); setMessage('同期を解除しました。端末内と共有保存先の記録は削除していません。');} catch (e) {setMessage((e as Error).message);}}}>この端末の同期を解除</button></> : <button disabled={busy || paused || !key || (provider === 'github' ? !repository || !branch : !url)} onClick={async () => {setBusy(true); try {if(provider === 'github')await connectGitHub(repository.trim(), branch.trim(), key.trim());else await connect(url.trim(), key.trim()); setKey(''); setConnected(true); setPhase('waiting'); setSyncedAt(undefined); setMessage('接続済み：同期待ち');} catch (e) {setMessage((e as Error).message);} finally {setBusy(false);}}}>接続して同期を開始</button>}</div>
+    <div className="sync-actions">{connected ? <><button disabled={busy || paused} onClick={async () => { const result=await sync();toast[result.kind](result.message,{id:'sync-attention'}); }}>今すぐ同期</button><button disabled={busy} onClick={async () => {try {await disconnect(); setConnected(false); setPhase('disconnected'); setSyncedAt(undefined); setKey(''); setResult(null); setMessage('同期を解除しました。端末内と共有保存先の記録は削除していません。');} catch (e) {setMessage((e as Error).message);}}}>この端末の同期を解除</button></> : <button disabled={busy || paused || !key || (provider === 'github' ? !repository || !branch : !url)} onClick={async () => {setBusy(true); try {if(provider === 'github')await connectGitHub(repository.trim(), branch.trim(), key.trim());else await connect(url.trim(), key.trim()); setKey(''); setConnected(true); setPhase('waiting'); setSyncedAt(undefined); setMessage('接続済み：同期待ち');} catch (e) {setMessage((e as Error).message);} finally {setBusy(false);}}}>接続して同期を開始</button>}</div>
     {result?.conflicts.length ? <section><h3>競合した項目</h3><p>この端末のJSONは「データ・設定」から出力できます。両方をバックアップし、記録や設定を確認してから再度同期してください。削除と変更が競合した場合も自動では処理しません。</p><button onClick={backupRemote}>共有保存先のJSONを出力</button>{result.conflicts.map(c => <details key={c.path}><summary>{c.path || 'データ全体'}</summary><pre>{JSON.stringify({この端末: c.local, 共有保存先: c.remote}, null, 2)}</pre></details>)}</section> : null}
     </section>
   </DialogContent></Dialog>;

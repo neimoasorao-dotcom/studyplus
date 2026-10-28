@@ -1,0 +1,10 @@
+/* Data motion is brief, value-driven, and independent of timer rendering. */
+.animated-number{font-variant-numeric:tabular-nums;display:inline-grid;vertical-align:baseline}.animated-number::after{content:attr(data-final);visibility:hidden;grid-area:1/1}.animated-number-visual{grid-area:1/1}.animated-number-visual::before{content:attr(data-value)}
+.distribution-segment{animation:insight-arc var(--motion-data,420ms) var(--ease-out,cubic-bezier(.2,.7,.2,1)) both;transition:opacity var(--motion-micro,120ms),stroke-width var(--motion-component,200ms)}
+@keyframes insight-arc{from{stroke-dasharray:0 100}}
+.goal-progress-track>span,.ratio-comparison>span{width:100%;transform-origin:left center;transform:scaleX(var(--progress-scale,0));transition:transform var(--motion-data,420ms) var(--ease-out,cubic-bezier(.2,.7,.2,1));animation:insight-progress var(--motion-data,420ms) var(--ease-out,cubic-bezier(.2,.7,.2,1)) both}
+@keyframes insight-progress{from{transform:scaleX(0)}}
+.ratio-comparison>i{transition:left var(--motion-data,420ms) var(--ease-out,cubic-bezier(.2,.7,.2,1))}
+.trend-direction>svg{animation:insight-trend var(--motion-component,200ms) ease-out both}
+@keyframes insight-trend{from{opacity:.2;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.distribution-segment,.goal-progress-track>span,.ratio-comparison>span,.trend-direction>svg{animation:none;transition:none}.ratio-comparison>i{transition:none}}

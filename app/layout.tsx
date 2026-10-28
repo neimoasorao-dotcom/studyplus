@@ -3,6 +3,10 @@ import "./globals.css";
 import "../styles/tokens.css";
 import "../styles/workspace.css";
 import "../styles/insights.css";
+import "../styles/motion.css";
+import "../styles/bottom-sheet.css";
+import "../styles/record-interactions.css";
+import "../styles/infographic-motion.css";
 import { colorModeBootstrap } from "../lib/color-mode";
 export const metadata: Metadata = {
     title: "Studyplus 学習分析",
