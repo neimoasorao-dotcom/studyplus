@@ -2,6 +2,7 @@
 import { useEffect, useState, useMemo, type ReactNode } from 'react';
 import { ChevronRight, Target, BookOpen, Play, Check } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
+import { AnimatedMetric } from './interaction/animated-number';
 import { Distribution } from './data/insights';
 import { subjectSlices, materialSlices } from '@/lib/visual-insights';
 import { StartAction } from './study/start-action';
@@ -64,7 +65,7 @@ export function TodayHome({ selection, onSelection, data, date, timer, timerRead
     return <div className="today-home"><div className="flow-hero">
   <section className="panel summary-panel today-progress" aria-labelledby="today-progress-title">
    <div className="panel-head"><div><h2 id="today-progress-title">今日の進捗</h2></div><button className="daily-goal-edit" disabled={blocked} onClick={() => open(true)}><Target size={16}/>目標を設定</button></div>
-   <div className="today-total">{f(h.minutes)}</div>
+   <div className="today-total"><AnimatedMetric value={f(h.minutes)}/></div>
    <div className="today-goal-line"><span>{h.source} {f(h.target)}</span>{h.target !== null && <strong>{h.target === 0 ? '休み・調整日の目安' : h.achieved ? <><Check size={15}/>達成</> : <>あと {f(h.remaining)}</>}</strong>}</div>
    {h.target !== null && h.target > 0 && <><div className="today-meter" role="progressbar" aria-label={h.source + 'の達成率'} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, Math.round(h.minutes / h.target * 100))}><span style={{ width: Math.min(100, h.minutes / h.target * 100) + '%' }}/></div><p className="muted">{Math.round(h.minutes / h.target * 100)}%</p></>}
    {h.target !== null && h.target > 1440 && <p className="muted">週目標からの目安が24時間を超えています。<button onClick={() => go('week')}>週間目標を確認</button></p>}
@@ -98,7 +99,7 @@ export function TodayHome({ selection, onSelection, data, date, timer, timerRead
    {subjectDetail && <div className="subject-distribution-detail"><h3>{data.subjects.find(s=>s.id===subjectDetail)?.name || '科目未設定'}の教材</h3><Distribution label="選択した科目の教材配分" items={materialSlices(data,h.rs.filter(r=>subjectDetail==='__unassigned__'?!data.subjects.some(s=>s.id===r.subject_id):r.subject_id===subjectDetail))} format={f} onSelect={id=>{if(data.materials.some(m=>m.id===id))go('study?material='+encodeURIComponent(id));}}/>{data.subjects.some(s=>s.id===subjectDetail)&&<div className="actions"><button onClick={()=>go('subjects?subject='+encodeURIComponent(subjectDetail))}>科目の分析</button><button disabled={blocked} onClick={()=>onRecord('',subjectDetail)}>この科目で記録する</button></div>}</div>}
    <button className="today-records-link" onClick={() => go('records?date=' + date)}>今日の記録を見る（{h.rs.length}件）<ChevronRight size={16}/></button>
   </section>
-  <Dialog open={editing} onOpenChange={open}><DialogContent className="daily-goal-dialog" onPointerDownOutside={e => { if (saving)
+  <Dialog open={editing} onOpenChange={open}><DialogContent placement="responsive-sheet" className="daily-goal-dialog" onPointerDownOutside={e => { if (saving)
         e.preventDefault(); }} onEscapeKeyDown={e => { if (saving)
         e.preventDefault(); }} showCloseButton={!saving}><DialogHeader><DialogTitle>今日の目標を設定</DialogTitle><DialogDescription>{date} の目標です。未設定に戻すと曜日別・週間目標からの目安を表示します。</DialogDescription></DialogHeader><div className="manual-two"><label className="field"><span>今日の目標の時間</span><input type="number" min="0" max="24" inputMode="numeric" value={hours} disabled={saving} onChange={e => setHours(e.target.value)}/></label><label className="field"><span>今日の目標の分</span><input type="number" min="0" max="59" inputMode="numeric" value={minutes} disabled={saving} onChange={e => setMinutes(e.target.value)}/></label></div>{error && <p role="alert" className="notice error">{error}</p>}<button className="primary" disabled={saving} onClick={() => void save()}>今日の目標を保存</button><button disabled={saving} onClick={() => void save(true)}>未設定に戻して目安を使う</button></DialogContent></Dialog>
  </div>;
